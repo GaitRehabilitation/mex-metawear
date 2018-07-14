@@ -1,3 +1,6 @@
 [submodule "3rdparty/MetaWear-SDK-Cpp"]
 	path = 3rdparty/MetaWear-SDK-Cpp
 	url = https://github.com/mbientlab/MetaWear-SDK-Cpp.git
+[submodule "3rdparty/libblepp"]
+	path = 3rdparty/libblepp
+	url = https://github.com/edrosten/libblepp.git

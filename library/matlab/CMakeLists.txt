@@ -1,0 +1,1 @@
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/ DESTINATION ${CMAKE_INSTALL_PREFIX}/mex/metamotion-wrappers)
