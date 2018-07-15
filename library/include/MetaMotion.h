@@ -2,30 +2,25 @@
 // Created by michaelpollind on 7/14/18.
 //
 
-#ifndef MEX_METAWEAR_METAMOTION_H
-#define MEX_METAWEAR_METAMOTION_H
+#ifndef MEX_METAWEAR_MEXMOTION_H
+#define MEX_METAWEAR_MEXMOTION_H
 
 #include "mex.hpp"
 #include "mexAdapter.hpp"
-#include <unordered_map>
-#include <fstream>
-#include <MatlabEngine.hpp>
+#include "MetamotionWrapper.h"
 
-using matlab::mex::ArgumentList;
-using matlab::engine::convertUTF8StringToUTF16String;
-using namespace matlab::data;
-
-
-class MetaMotion : public Function{
-
-    // Pointer to MATLAB engine
-    std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
-
+class MexFunction : public matlab::mex::Function {
+    std::vector<MetaMotionWrapper*> m_devices;
 public:
-    void operator()(ArgumentList outputs, ArgumentList inputs);
-    ~MetaMotion();
+    void operator()(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+    ~MexFunction();
+
+private:
+    void metwareConnect(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+    void metwareConfigure(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+    void metwareStart(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+    void metwareStop(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+
 
 };
-
-
-#endif //MEX_METAWEAR_METAMOTION_H
+#endif //MEX_METAWEAR_MEXMOTION_H

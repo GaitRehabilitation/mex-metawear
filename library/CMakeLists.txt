@@ -6,7 +6,6 @@ SET(SOURCE
 SET(INCLUDE
         include/MetamotionLinuxWrapper.h
         include/MetamotionWrapper.h
-        include/MetaMotion.h
         )
 
 INCLUDE_DIRECTORIES(${Matlab_INCLUDE_DIRS})

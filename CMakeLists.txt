@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-find_package(Matlab REQUIRED MX_LIBRARY MAIN_PROGRAM)
+find_package(Matlab REQUIRED)
 find_package(Qt5 COMPONENTS Bluetooth REQUIRED)
 
 if(NOT Matlab_FOUND)
