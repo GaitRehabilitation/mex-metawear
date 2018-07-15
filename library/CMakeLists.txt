@@ -11,12 +11,12 @@ SET(INCLUDE
         include/MetaMotion.h
         )
 
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/3rdparty/libblepp)
 INCLUDE_DIRECTORIES(${Matlab_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} )
+INCLUDE_DIRECTORIES(${Metawear_INCLUDE_DIRS} )
+INCLUDE_DIRECTORIES(${Libblepp_INCLUDE_DIRS} )
 
 add_library(mex_metawear SHARED ${SOURCE} ${INCLUDE})
 target_link_libraries(mex_metawear ${Matlab_LIBRARIES})
-target_link_libraries(mex_metawear ble++)
-
-
+target_link_libraries(mex_metawear ble++ )
+target_link_libraries(mex_metawear MetaWear-SDK)
