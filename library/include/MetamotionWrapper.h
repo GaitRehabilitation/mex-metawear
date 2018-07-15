@@ -6,6 +6,8 @@
 #define MEX_METAWEAR_METAMOTIONWRAPPER_H
 
 class MetaMotionWrapper{
+    MetaMotionWrapper();
+    virtual ~MetaMotionWrapper();
 
 };
 

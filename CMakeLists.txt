@@ -1,3 +1,5 @@
+add_subdirectory(3rdparty/libblepp)
+
 cmake_minimum_required(VERSION 3.10)
 project(mex_metawear)
 
@@ -13,6 +15,5 @@ if(NOT Matlab_FOUND)
 endif()
 
 
-#add_subdirectory(3rdparty/libblepp)
 add_subdirectory(library)
 add_subdirectory(library/matlab)

@@ -10,16 +10,18 @@
 #include "MetamotionWrapper.h"
 
 class MexFunction : public matlab::mex::Function {
+private:
+    std::shared_ptr<matlab::engine::MATLABEngine> m_matlabPtr;
     std::vector<MetaMotionWrapper*> m_devices;
 public:
-    void operator()(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
-    ~MexFunction();
-
+    MexFunction();
+    void operator()(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs) override;
+    ~MexFunction() override;
 private:
-    void metwareConnect(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
-    void metwareConfigure(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
-    void metwareStart(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
-    void metwareStop(matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs);
+    void mexMetwareConnect(matlab::mex::ArgumentList& outputs, matlab::mex::ArgumentList& inputs);
+    void mexMetwareConfigure(matlab::mex::ArgumentList& outputs, matlab::mex::ArgumentList& inputs);
+    void mexMetwareStart(matlab::mex::ArgumentList& outputs, matlab::mex::ArgumentList& inputs);
+    void mexMetwareStop(matlab::mex::ArgumentList& outputs, matlab::mex::ArgumentList& inputs);
 
 
 };
