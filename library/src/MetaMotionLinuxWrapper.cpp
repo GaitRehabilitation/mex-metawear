@@ -33,8 +33,9 @@ void convertToUUID(BLEPP::bt_uuid_t& result, uint8_t *low, uint8_t *high) {
     }
 }
 
-void MetaMotionLinuxWrapper::read_gatt_char_qt(void *context, const void *caller, const MblMwGattChar *characteristic, MblMwFnIntVoidPtrArray handler) {
+void MetaMotionLinuxWrapper::read_gatt_char(void *context, const void *caller, const MblMwGattChar *characteristic, MblMwFnIntVoidPtrArray handler) {
     MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
+
 
     BLEPP::bt_uuid_t temp;
     convertToUUID(temp,(uint8_t *)characteristic->service_uuid_low,(uint8_t *)characteristic->service_uuid_high);
@@ -49,6 +50,10 @@ void MetaMotionLinuxWrapper::read_gatt_char_qt(void *context, const void *caller
             for (auto &characteristicHandler: serviceHandler.characteristics) {
                 if(characteristicHandler.uuid == characteristicUuid){
                     characteristicHandler.read_request();
+                    characteristicHandler.cb_read = [=](const PDUReadResponse& response){
+                        handler(wrapper, response.data, static_cast<uint8_t>(response.length));
+
+                    };
                 }
             }
         }
@@ -56,7 +61,7 @@ void MetaMotionLinuxWrapper::read_gatt_char_qt(void *context, const void *caller
 }
 
 
-void MetaMotionLinuxWrapper::write_gatt_char_qt(void *context, const void *caller, MblMwGattCharWriteType writeType, const MblMwGattChar *characteristic, const uint8_t *value, uint8_t length) {
+void MetaMotionLinuxWrapper::write_gatt_char(void *context, const void *caller, MblMwGattCharWriteType writeType, const MblMwGattChar *characteristic, const uint8_t *value, uint8_t length) {
     MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
 
     BLEPP::bt_uuid_t temp;
@@ -70,6 +75,7 @@ void MetaMotionLinuxWrapper::write_gatt_char_qt(void *context, const void *calle
         if(serviceHandler.uuid == serviceUuid) {
             for (auto &characteristicHandler: serviceHandler.characteristics) {
                 if(characteristicHandler.uuid == characteristicUuid){
+                    characteristicHandler.write_without_response = (writeType == MblMwGattCharWriteType::MBL_MW_GATT_CHAR_WRITE_WITHOUT_RESPONSE);
                     characteristicHandler.write_request(value,length);
                 }
             }
@@ -78,7 +84,7 @@ void MetaMotionLinuxWrapper::write_gatt_char_qt(void *context, const void *calle
 
 }
 
-void MetaMotionLinuxWrapper::enable_char_notify_qt(void *context, const void *caller,const MblMwGattChar *characteristic,MblMwFnIntVoidPtrArray handler,MblMwFnVoidVoidPtrInt ready) {
+void MetaMotionLinuxWrapper::enable_char_notify(void *context, const void *caller,const MblMwGattChar *characteristic,MblMwFnIntVoidPtrArray handler,MblMwFnVoidVoidPtrInt ready) {
     MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
 
     BLEPP::bt_uuid_t temp;
@@ -88,13 +94,20 @@ void MetaMotionLinuxWrapper::enable_char_notify_qt(void *context, const void *ca
     convertToUUID(temp,(uint8_t *)characteristic->service_uuid_low,(uint8_t *)characteristic->service_uuid_high);
     BLEPP::UUID characteristicUuid =  BLEPP::UUID::from(temp);
 
-
-
     for(auto& serviceHandler: wrapper->m_gatt->primary_services) {
         if(serviceHandler.uuid == serviceUuid) {
             for (auto &characteristicHandler: serviceHandler.characteristics) {
                 if(characteristicHandler.uuid == characteristicUuid){
-                    characteristicHandler.set_notify_and_indicate(true, false,BLEPP::WriteType::Request);
+                    characteristicHandler.set_notify_and_indicate(true, false);
+                    characteristicHandler.cb_notify_or_indicate = [=](const  PDUNotificationOrIndication& notificationOrIndication){
+                        if(notificationOrIndication.notification()) {
+                            ready(caller, MBL_MW_STATUS_OK);
+                        }
+                        else{
+                            ready(caller, MBL_MW_STATUS_ERROR_ENABLE_NOTIFY);
+                        }
+
+                    };
                 }
             }
         }
@@ -102,10 +115,13 @@ void MetaMotionLinuxWrapper::enable_char_notify_qt(void *context, const void *ca
 }
 
 
-void MetaMotionLinuxWrapper::on_disconnect_qt(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler) {
+void MetaMotionLinuxWrapper::on_disconnect(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler) {
     MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
-
+    wrapper->m_gatt->cb_disconnected = [=](BLEPP::BLEGATTStateMachine::Disconnect disconnect){
+        handler(wrapper,0);
+    };
 }
+
 
 MetaMotionLinuxWrapper::MetaMotionLinuxWrapper() {
     m_gatt = new BLEPP::BLEGATTStateMachine();
@@ -116,13 +132,28 @@ MetaMotionLinuxWrapper::MetaMotionLinuxWrapper() {
 
     MblMwBtleConnection btleConnection;
     btleConnection.context = this;
-    btleConnection.write_gatt_char = write_gatt_char_qt;
-    btleConnection.read_gatt_char = read_gatt_char_qt;
-    btleConnection.enable_notifications = enable_char_notify_qt;
-    btleConnection.on_disconnect = on_disconnect_qt;
+    btleConnection.write_gatt_char = write_gatt_char;
+    btleConnection.read_gatt_char = read_gatt_char;
+    btleConnection.enable_notifications = enable_char_notify;
+    btleConnection.on_disconnect = on_disconnect;
     this->m_metaWearBoard = mbl_mw_metawearboard_create(&btleConnection);
 
 
+    m_foundServiceCharacteristics = [=](){
+        BLEPP::pretty_print_tree(*this->m_gatt);
+
+        for(auto& service: this->m_gatt->primary_services) {
+            for (auto &characteristic: service.characteristics) {
+                characteristic.cb_notify_or_indicate = m_characteristicNotify;
+            }
+        }
+    };
+    m_gatt->setup_standard_scan(m_foundServiceCharacteristics);
+
+}
+
+void MetaMotionLinuxWrapper::commitChanges() {
+    
 }
 
 MetaMotionLinuxWrapper::~MetaMotionLinuxWrapper() {
