@@ -1,7 +1,7 @@
 //
 // Created by michaelpollind on 7/14/18.
 //
-#include "include/MetaMotionLinuxWrapper.h"
+#include "include/MetaMotionBluetoothLinux.h"
 
 #include "metawear/core/data.h"
 #include "metawear/core/datasignal.h"
@@ -33,8 +33,8 @@ void convertToUUID(BLEPP::bt_uuid_t& result, uint8_t *low, uint8_t *high) {
     }
 }
 
-void MetaMotionLinuxWrapper::read_gatt_char(void *context, const void *caller, const MblMwGattChar *characteristic, MblMwFnIntVoidPtrArray handler) {
-    MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
+void MetaMotionBluetoothLinux::read_gatt_char(void *context, const void *caller, const MblMwGattChar *characteristic, MblMwFnIntVoidPtrArray handler) {
+    MetaMotionBluetoothLinux* wrapper = static_cast<MetaMotionBluetoothLinux *>(context);
 
 
     BLEPP::bt_uuid_t temp;
@@ -61,8 +61,8 @@ void MetaMotionLinuxWrapper::read_gatt_char(void *context, const void *caller, c
 }
 
 
-void MetaMotionLinuxWrapper::write_gatt_char(void *context, const void *caller, MblMwGattCharWriteType writeType, const MblMwGattChar *characteristic, const uint8_t *value, uint8_t length) {
-    MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
+void MetaMotionBluetoothLinux::write_gatt_char(void *context, const void *caller, MblMwGattCharWriteType writeType, const MblMwGattChar *characteristic, const uint8_t *value, uint8_t length) {
+    MetaMotionBluetoothLinux* wrapper = static_cast<MetaMotionBluetoothLinux *>(context);
 
     BLEPP::bt_uuid_t temp;
     convertToUUID(temp,(uint8_t *)characteristic->service_uuid_low,(uint8_t *)characteristic->service_uuid_high);
@@ -84,8 +84,8 @@ void MetaMotionLinuxWrapper::write_gatt_char(void *context, const void *caller, 
 
 }
 
-void MetaMotionLinuxWrapper::enable_char_notify(void *context, const void *caller,const MblMwGattChar *characteristic,MblMwFnIntVoidPtrArray handler,MblMwFnVoidVoidPtrInt ready) {
-    MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
+void MetaMotionBluetoothLinux::enable_char_notify(void *context, const void *caller,const MblMwGattChar *characteristic,MblMwFnIntVoidPtrArray handler,MblMwFnVoidVoidPtrInt ready) {
+    MetaMotionBluetoothLinux* wrapper = static_cast<MetaMotionBluetoothLinux *>(context);
 
     BLEPP::bt_uuid_t temp;
     convertToUUID(temp,(uint8_t *)characteristic->service_uuid_low,(uint8_t *)characteristic->service_uuid_high);
@@ -115,15 +115,15 @@ void MetaMotionLinuxWrapper::enable_char_notify(void *context, const void *calle
 }
 
 
-void MetaMotionLinuxWrapper::on_disconnect(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler) {
-    MetaMotionLinuxWrapper* wrapper = static_cast<MetaMotionLinuxWrapper *>(context);
+void MetaMotionBluetoothLinux::on_disconnect(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler) {
+    MetaMotionBluetoothLinux* wrapper = static_cast<MetaMotionBluetoothLinux *>(context);
     wrapper->m_gatt->cb_disconnected = [=](BLEPP::BLEGATTStateMachine::Disconnect disconnect){
         handler(wrapper,0);
     };
 }
 
 
-MetaMotionLinuxWrapper::MetaMotionLinuxWrapper() {
+MetaMotionBluetoothLinux::MetaMotionBluetoothLinux(): m_isConnected(0) {
     m_gatt = new BLEPP::BLEGATTStateMachine();
     m_gatt->cb_disconnected = [=](BLEPP::BLEGATTStateMachine::Disconnect d){
         mbl_mw_metawearboard_tear_down(this->m_metaWearBoard);
@@ -138,7 +138,9 @@ MetaMotionLinuxWrapper::MetaMotionLinuxWrapper() {
     btleConnection.on_disconnect = on_disconnect;
     this->m_metaWearBoard = mbl_mw_metawearboard_create(&btleConnection);
 
+}
 
+void MetaMotionBluetoothLinux::connect() {
     m_foundServiceCharacteristics = [=](){
         BLEPP::pretty_print_tree(*this->m_gatt);
 
@@ -152,11 +154,15 @@ MetaMotionLinuxWrapper::MetaMotionLinuxWrapper() {
 
 }
 
-void MetaMotionLinuxWrapper::commitChanges() {
+void MetaMotionBluetoothLinux::disConnect() {
+    m_gatt->close();
+}
+
+void MetaMotionBluetoothLinux::commitChanges() {
     
 }
 
-MetaMotionLinuxWrapper::~MetaMotionLinuxWrapper() {
+MetaMotionBluetoothLinux::~MetaMotionBluetoothLinux() {
 
 
 }

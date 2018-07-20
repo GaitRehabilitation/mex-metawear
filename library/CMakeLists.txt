@@ -1,11 +1,11 @@
 SET(SOURCE
-        src/MetaMotionLinuxWrapper.cpp
+        src/MetaMotionBluetoothLinux.cpp
         src/MetamotionWrapper.cpp
         src/MetaMotion.cpp
         src/MexUtility.cpp
         )
 SET(INCLUDE
-        include/MetaMotionLinuxWrapper.h
+        include/MetaMotionBluetoothLinux.h
         include/MetamotionWrapper.h
         include/MexUtility.h
         include/MetaMotion.h

@@ -12,6 +12,8 @@
 #include <bluetooth/bluetooth.h>
 #include <blepp/att_pdu.h>
 
+#include "MetaMotionBluetooth.h"
+
 class MblMwMetaWearBoard;
 namespace BLEPP{
     class BLEGATTStateMachine;
@@ -19,11 +21,12 @@ namespace BLEPP{
 using namespace BLEPP;
 
 
-class MetaMotionLinuxWrapper{
+class MetaMotionBluetoothLinux{
 
 private:
     BLEPP::BLEGATTStateMachine* m_gatt;
     MblMwMetaWearBoard *m_metaWearBoard;
+    bool m_isConnected;
 
 
     static void read_gatt_char(void *context, const void *caller,
@@ -44,9 +47,11 @@ private:
     std::function<void(const  PDUNotificationOrIndication&)> m_characteristicNotify;
 public:
 
-    MetaMotionLinuxWrapper();
-    ~MetaMotionLinuxWrapper();
+    MetaMotionBluetoothLinux();
+    ~MetaMotionBluetoothLinux();
 
+    void connect();
+    void disConnect();
     void commitChanges();
 
 
