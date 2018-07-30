@@ -21,7 +21,7 @@ namespace BLEPP{
 using namespace BLEPP;
 
 
-class MetaMotionBluetoothLinux{
+class MetaMotionBluetoothLinux : public MetaMotionBluetooth{
 
 private:
     BLEPP::BLEGATTStateMachine* m_gatt;
@@ -51,9 +51,7 @@ public:
     ~MetaMotionBluetoothLinux();
 
     void connect();
-    void disConnect();
-    void commitChanges();
-
+    void disconnect();
 
 };
 

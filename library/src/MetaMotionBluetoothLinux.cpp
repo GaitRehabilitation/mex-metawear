@@ -23,7 +23,7 @@
 #include <bluetooth/bluetooth.h>
 
 
-void convertToUUID(BLEPP::bt_uuid_t& result, uint8_t *low, uint8_t *high) {
+void convertToUUID(BLEPP::bt_uuid_t& result, const uint8_t *low, const uint8_t *high) {
     result.type = BLEPP::bt_uuid_type_t::BT_UUID128;
     for (int i = 0; i < 8; i++) {
         result.value.u128.data[i] = high[7 - i];
@@ -52,7 +52,6 @@ void MetaMotionBluetoothLinux::read_gatt_char(void *context, const void *caller,
                     characteristicHandler.read_request();
                     characteristicHandler.cb_read = [=](const PDUReadResponse& response){
                         handler(wrapper, response.data, static_cast<uint8_t>(response.length));
-
                     };
                 }
             }
@@ -123,7 +122,7 @@ void MetaMotionBluetoothLinux::on_disconnect(void *context, const void *caller, 
 }
 
 
-MetaMotionBluetoothLinux::MetaMotionBluetoothLinux(): m_isConnected(0) {
+MetaMotionBluetoothLinux::MetaMotionBluetoothLinux(): m_isConnected(false) {
     m_gatt = new BLEPP::BLEGATTStateMachine();
     m_gatt->cb_disconnected = [=](BLEPP::BLEGATTStateMachine::Disconnect d){
         mbl_mw_metawearboard_tear_down(this->m_metaWearBoard);
@@ -154,13 +153,10 @@ void MetaMotionBluetoothLinux::connect() {
 
 }
 
-void MetaMotionBluetoothLinux::disConnect() {
+void MetaMotionBluetoothLinux::disconnect() {
     m_gatt->close();
 }
 
-void MetaMotionBluetoothLinux::commitChanges() {
-    
-}
 
 MetaMotionBluetoothLinux::~MetaMotionBluetoothLinux() {
 

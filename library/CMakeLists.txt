@@ -1,14 +1,18 @@
 SET(SOURCE
+        src/MetaMotionBluetoothWindows.cpp
         src/MetaMotionBluetoothLinux.cpp
         src/MetamotionWrapper.cpp
         src/MetaMotion.cpp
         src/MexUtility.cpp
+        src/MetaMotionBluetooth.cpp
         )
 SET(INCLUDE
         include/MetaMotionBluetoothLinux.h
         include/MetamotionWrapper.h
         include/MexUtility.h
         include/MetaMotion.h
+        include/MetaMotionBluetooth.h
+        include/MetaMotionBluetoothWindows.h
         )
 
 INCLUDE_DIRECTORIES(${Matlab_INCLUDE_DIRS})

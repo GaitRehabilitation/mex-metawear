@@ -93,7 +93,7 @@ void MexFunction::mexMetwareConfigure(matlab::mex::ArgumentList& outputs, matlab
             else if(target.toAscii() == "magnetometer"){
 
             }
-            else if(target.toAscii() == "humidigy"){
+            else if(target.toAscii() == "humidity"){
 
             }
             else if(target.toAscii() == "barometer"){
@@ -124,7 +124,38 @@ void MexFunction::mexMetwareStop(matlab::mex::ArgumentList& outputs, matlab::mex
 }
 
 void MexFunction::mexMetwareQuery(matlab::mex::ArgumentList &outputs, matlab::mex::ArgumentList &inputs) {
+    if(inputs.size() >= 2){
+        if(inputs[1].getType() == matlab::data::ArrayType::CHAR) {
+            matlab::data::CharArray target = inputs[1];
+            if(target.toAscii() == "accelerometer"){
 
+            }
+            else if(target.toAscii() == "gyro"){
+
+            }
+            else if(target.toAscii() == "i2c"){
+
+            }
+            else if(target.toAscii() == "spi"){
+
+            }
+            else if(target.toAscii() == "fusion"){
+
+            }
+            else if(target.toAscii() == "magnetometer"){
+
+            }
+            else if(target.toAscii() == "humidity"){
+
+            }
+            else if(target.toAscii() == "barometer"){
+
+            }
+            else if(target.toAscii() == "commit"){
+
+            }
+        }
+    }
 }
 
 std::string MexFunction::getAddress(matlab::data::ObjectArray &objectArray) {

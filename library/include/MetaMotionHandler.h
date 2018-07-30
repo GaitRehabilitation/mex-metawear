@@ -5,8 +5,16 @@
 #ifndef MEX_METAWEAR_METAMOTIONHANDLER_H
 #define MEX_METAWEAR_METAMOTIONHANDLER_H
 
+class MetaMotionBluetooth;
 
 class MetaMotionHandler {
+private:
+    MetaMotionBluetooth* m_bluetooth;
+
+    std::queu
+
+public:
+    MetaMotionHandler(MetaMotionBluetooth* bluetooth);
 
 };
 

@@ -5,18 +5,19 @@
 #ifndef MEX_METAWEAR_METAMOTIONBLUETOOTH_H
 #define MEX_METAWEAR_METAMOTIONBLUETOOTH_H
 
+class MblMwMetaWearBoard;
 
 class MetaMotionBluetooth {
-    MetaMotionBluetooth();
-    ~MetaMotionBluetooth();
+public:
+    MetaMotionBluetooth() {};
+
+    virtual ~MetaMotionBluetooth() = 0;
 
     virtual void connect() = 0;
-    virtual void disConnect() = 0;
-    virtual void commitChanges() = 0;
 
+    virtual void disconnect() = 0;
 
-    
-
+    MblMwMetaWearBoard* getMetawareBoard() = 0;
 };
 
 
