@@ -5,6 +5,7 @@ SET(SOURCE
         src/MetaMotion.cpp
         src/MexUtility.cpp
         src/MetaMotionBluetooth.cpp
+        src/MetawearWrapperBase.cpp
         )
 SET(INCLUDE
         include/MetaMotionBluetoothLinux.h
@@ -13,6 +14,7 @@ SET(INCLUDE
         include/MetaMotion.h
         include/MetaMotionBluetooth.h
         include/MetaMotionBluetoothWindows.h
+        include/MetawearWrapperBase.h
         )
 
 INCLUDE_DIRECTORIES(${Matlab_INCLUDE_DIRS})
@@ -22,5 +24,4 @@ INCLUDE_DIRECTORIES(${Libblepp_INCLUDE_DIRS} )
 
 add_library(mex_metawear SHARED ${SOURCE} ${INCLUDE})
 target_link_libraries(mex_metawear ${Matlab_LIBRARIES})
-target_link_libraries(mex_metawear ble++ )
 target_link_libraries(mex_metawear MetaWear-SDK)
