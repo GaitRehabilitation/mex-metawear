@@ -32,7 +32,8 @@ if (MSVC)
     set(PLATFORM_HEADERS
             platform/windows/include/MetawearWrapper.h
             )
-
+    add_compile_options("/std:c++14")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif(MSVC)
 
 include_directories(${Matlab_INCLUDE_DIRS})
@@ -52,10 +53,11 @@ target_link_libraries(mex_metawear ${Matlab_LIBRARIES})
 target_link_libraries(mex_metawear extern_metawear)
 
 
-if(WIN32)
-    # socket utilites for bitwise conversion of bluetooth address
+if (MSVC)
     target_link_libraries(mex_metawear wsock32 ws2_32)
+endif(MSVC)
 
+if(WIN32)
     if(MINGW)
         set(_matlab_lib_dir_for_search ${Matlab_EXTERN_LIBRARY_DIR}/mingw64)
     else()

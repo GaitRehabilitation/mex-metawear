@@ -56,14 +56,14 @@ private:
                                    MblMwFnIntVoidPtrArray handler, MblMwFnVoidVoidPtrInt ready);
 
     static void on_disconnect(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler);
+    void cleanup();
 
 public:
-    MetawearWrapper(std::string address);
+    MetawearWrapper(const std::string& mac, unsigned int size);
+    ~MetawearWrapper();
+    void connect() override;
+    void disconnect() override;
 
-    void connect();
-    void disconnect();
-
-    void cleanup();
 
 };
 

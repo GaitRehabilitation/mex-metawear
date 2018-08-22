@@ -3,19 +3,20 @@
 //
 #include "MetawearWrapper.h"
 
-#include <3rdparty/mbientlab/src/metawear/core/status.h>
-
+#include <metawear/core/status.h>
 #include <vector>
 #include <collection.h>
 #include <sstream>
 #include <iomanip>
 #include <winsock.h>
-#include <QMetaObject>
+#include <iostream>
 #define MAX_LEN_UUID_STR 37
 
-MetawearWrapper::MetawearWrapper(std::string address){
-    this->m_mac = address;
 
+static Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
+
+MetawearWrapper::MetawearWrapper(const std::string& mac, unsigned int size):
+        MetawearWrapperBase::MetawearWrapperBase(mac,size), m_discover_device_event(), m_event_set(m_discover_device_event){
 
     CoInitializeSecurity(
             nullptr, // TODO: "O:BAG:BAD:(A;;0x7;;;PS)(A;;0x3;;;SY)(A;;0x7;;;BA)(A;;0x3;;;AC)(A;;0x3;;;LS)(A;;0x3;;;NS)"
@@ -29,7 +30,7 @@ MetawearWrapper::MetawearWrapper(std::string address){
             nullptr);
 
 
-    std::string mac_copy(address);
+    std::string mac_copy(getMacAddress());
     mac_copy.erase(2, 1);
     mac_copy.erase(4, 1);
     mac_copy.erase(6, 1);
@@ -42,16 +43,14 @@ MetawearWrapper::MetawearWrapper(std::string address){
 
     create_task(BluetoothLEDevice::FromBluetoothAddressAsync(mac_ulong)).then([=](BluetoothLEDevice^ leDevice) {
         if (leDevice == nullptr) {
-            qWarning() << "Failed to discover device";
-
+            std::cout << "Failed to discover device";
         }
         else {
             leDevice->ConnectionStatusChanged += ref new TypedEventHandler<BluetoothLEDevice^, Platform::Object^>([=](BluetoothLEDevice^ sender, Platform::Object^ args) {
                 switch (sender->ConnectionStatus) {
                     case BluetoothConnectionStatus::Disconnected:
-                        qWarning() << "Failed to connect to device";
+                        std::cout << "Failed to connect to device";
                         this->cleanup();
-
                         break;
                 }
             });
@@ -61,19 +60,19 @@ MetawearWrapper::MetawearWrapper(std::string address){
     });
 
     m_event_set.then([=]() {
-        qDebug() << "Started Gatt service Async";
+        std::cout <<  "Started Gatt service Async";
         return create_task(this->m_device->GetGattServicesAsync(BluetoothCacheMode::Uncached));
     }).then([=](GattDeviceServicesResult^ result) {
         if (result->Status == GattCommunicationStatus::Success) {
             std::vector<task<GattCharacteristicsResult^>> find_gattchar_tasks;
-            for (uint x = 0; x < result->Services->Size; ++x) {
+            for (unsigned int x = 0; x < result->Services->Size; ++x) {
                 auto service = result->Services->GetAt(x);
                 m_services.emplace(service->Uuid, service);
                 find_gattchar_tasks.push_back(create_task(service->GetCharacteristicsAsync(BluetoothCacheMode::Uncached)));
             }
             return when_all(std::begin(find_gattchar_tasks), std::end(find_gattchar_tasks));
         }
-        qWarning() << "Failed fo discover Gatt service";
+        std::cout <<  "Failed fo discover Gatt service";
 
     }).then([=](std::vector<GattCharacteristicsResult^> results) {
         for (auto it : results) {
@@ -84,11 +83,11 @@ MetawearWrapper::MetawearWrapper(std::string address){
                 }
             }
             else {
-                qWarning() << "Failed to discover gatt charactersitic (status = " << static_cast<int>(it->Status) << ")";
+                std::cout <<  "Failed to discover gatt charactersitic (status = " << static_cast<int>(it->Status) << ")";
             }
         }
 
-        qDebug() << "Configuring Mbientsensor";
+        std::cout <<  "Configuring Mbientsensor";
         MblMwBtleConnection btleConnection;
         btleConnection.context = this;
         btleConnection.write_gatt_char = write_gatt_char;
@@ -96,9 +95,7 @@ MetawearWrapper::MetawearWrapper(std::string address){
         btleConnection.enable_notifications = enable_char_notify;
         btleConnection.on_disconnect = on_disconnect;
         this->m_metaWearBoard = mbl_mw_metawearboard_create(&btleConnection);
-        QMetaObject::invokeMethod(this, "configureHandlers", Qt::QueuedConnection);
-        emit this->onSensorConfigured();
-        //this->configureHandlers();
+
     });
 
 }
@@ -135,7 +132,7 @@ static void MetawearWrapper::read_gatt_char(void *context, const void *caller, c
             handler(caller,(uint8_t*)wrapper->Data, wrapper->Length);
 
         } else {
-            qWarning() << "failed to read gatt";
+            std::cout << "failed to read gatt";
         }
     }).wait();
 }
@@ -154,7 +151,7 @@ static void MetawearWrapper::write_gatt_char(void *context, const void *caller, 
         return;
     create_task(ch->WriteValueAsync(CryptographicBuffer::CreateFromByteArray(arr), GattWriteOption::WriteWithResponse)).then([](GattCommunicationStatus status){
         if(status  != GattCommunicationStatus::Success ){
-            qWarning() << "Failed to send data";
+            std::cout <<  "Failed to send data";
         }
     }).wait();
 }
@@ -211,7 +208,7 @@ GattCharacteristic^  MetawearWrapper::findCharacterstic( uint64_t low, uint64_t 
         if (it != m_characterstics.end())
             return it->second;
     }
-    qWarning() << "Failed to find characterstic";
+    std::cout <<  "Failed to find characterstic";
     return nullptr;
 }
 

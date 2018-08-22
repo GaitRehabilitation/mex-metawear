@@ -23,14 +23,14 @@ private:
     std::string m_firmwareVersion;
     std::string m_model;
 
-    MblMwMetaWearBoard *m_metaWearBoard;
-
     std::string m_mac;
     bool m_isMetawerReady;
 
     MetawearDataStream<CartesianFloatContainer*> m_accelerationStream;
 
 public:
+    MblMwMetaWearBoard *m_metaWearBoard;
+protected:
     MetawearWrapperBase(const std::string& mac, unsigned int size);
     ~MetawearWrapperBase();
 
