@@ -1,6 +1,17 @@
 //
 // Created by Michael on 8/20/2018.
 //
+#include "MetawearWrapper.h"
+
+#include <3rdparty/mbientlab/src/metawear/core/status.h>
+
+#include <vector>
+#include <collection.h>
+#include <sstream>
+#include <iomanip>
+#include <winsock.h>
+#include <QMetaObject>
+#define MAX_LEN_UUID_STR 37
 
 MetawearWrapper::MetawearWrapper(std::string address){
     this->m_mac = address;

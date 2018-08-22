@@ -6,14 +6,37 @@
 #define MEX_METAWEAR_METAWEARWRAPPERBASE_H
 
 #include <string>
+#include <metawear/core/types.h>
+#include <metawear/core/cpp/metawearboard_def.h>
+#include "MetawearDatastream.h"
 
 class MetawearWrapperBase{
-private:
-    bool m_isMetawerReady;
-public:
-    MetawearWrapperBase(std::string address);
 
-    std::string getMacAddress();
+private:
+    typedef struct {
+        float x;
+        float y;
+        float z;
+        int64_t epoch;
+    } CartesianFloatContainer;
+
+    std::string m_firmwareVersion;
+    std::string m_model;
+
+    MblMwMetaWearBoard *m_metaWearBoard;
+
+    std::string m_mac;
+    bool m_isMetawerReady;
+
+    MetawearDataStream<CartesianFloatContainer*> m_accelerationStream;
+
+public:
+    MetawearWrapperBase(const std::string& mac, unsigned int size);
+    ~MetawearWrapperBase();
+
+    const std::string& getMacAddress() const;
+
+    void configureMetawear();
 
     virtual void connect();
 

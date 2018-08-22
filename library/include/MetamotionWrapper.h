@@ -7,9 +7,7 @@
 
 class MetaMotionWrapper{
 
-    private:
-
-
+private:
 public:
 
     MetaMotionWrapper();

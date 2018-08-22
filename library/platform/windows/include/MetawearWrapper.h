@@ -8,7 +8,6 @@
 #include "MetawearWrapperBase.h"
 #include <string>
 
-
 #include <ppltasks.h>
 #include <unordered_map>
 #include <Windows.Foundation.h>
@@ -16,7 +15,6 @@
 #include <Windows.Devices.Bluetooth.Advertisement.h>
 #include <wrl/wrappers/corewrappers.h>
 
-#include "common/metawearwrapperbase.h"
 
 using namespace concurrency;
 using namespace Windows::Devices::Bluetooth;

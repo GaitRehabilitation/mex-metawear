@@ -4,11 +4,11 @@
 
 #include <MatlabDataArray/MDArray.hpp>
 #include <MatlabDataArray/CharArray.hpp>
-#include "include/MetaMotion.h"
 #include "mex.hpp"
 #include "mexAdapter.hpp"
-#include "include/MexUtility.h"
+#include "MexUtility.h"
 #include "regex"
+#include "MetaMotion.h"
 
 MexFunction::MexFunction() : m_devices(){
 }
@@ -113,7 +113,8 @@ void MexFunction::mexMetwareStart(matlab::mex::ArgumentList& outputs, matlab::me
     }
 
     if(inputs[1].type == matlab::data::ArrayType::OBJECT) {
-        std::string address = getAddress(inputs[1]);
+        matlab::data::ObjectArray o = inputs[1];
+        std::string address = getAddress(o);
     }
 
 
