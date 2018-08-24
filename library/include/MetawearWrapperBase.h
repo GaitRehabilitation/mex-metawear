@@ -8,39 +8,47 @@
 #include <string>
 #include <metawear/core/types.h>
 #include <metawear/core/cpp/metawearboard_def.h>
+#include <metawear/sensor/gyro_bmi160.h>
+#include "StreamTypes.h"
 #include "MetawearDatastream.h"
 
+
 class MetawearWrapperBase{
-
-private:
-    typedef struct {
-        float x;
-        float y;
-        float z;
-        int64_t epoch;
-    } CartesianFloatContainer;
-
+protected:
     std::string m_firmwareVersion;
     std::string m_model;
 
     std::string m_mac;
     bool m_isMetawerReady;
+    MblMwMetaWearBoard *m_metaWearBoard;
 
     MetawearDataStream<CartesianFloatContainer*> m_accelerationStream;
-
+    MetawearDataStream<CartesianFloatContainer*> m_gyroStream;
 public:
-    MblMwMetaWearBoard *m_metaWearBoard;
-protected:
-    MetawearWrapperBase(const std::string& mac, unsigned int size);
+
+
+    MetawearWrapperBase(const std::string& mac);
     ~MetawearWrapperBase();
 
     const std::string& getMacAddress() const;
 
     void configureMetawear();
 
-    virtual void connect();
+    void startGyro();
+    void startAccelerometer();
 
-    virtual void disconnect();
+    void stopGyro();
+    void stopAccelerometer();
+
+    void configureGyroscope(MblMwGyroBmi160Range range, MblMwGyroBmi160Odr sample);
+    void configureAccelerometer(float range, float sample);
+
+    virtual void connect() = 0;
+    virtual void disconnect() = 0;
+
+     MetawearDataStream<CartesianFloatContainer *>* getAccelerationStream();
+    MetawearDataStream<CartesianFloatContainer*>* getGyroStream();
+
 
 };
 

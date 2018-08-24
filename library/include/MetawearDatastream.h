@@ -10,13 +10,26 @@
 
 template <class T>
 class MetawearDataStream {
+friend class MetawearWrapperBase;
 private:
     std::mutex m_data_lock;
     T* m_payload;
     unsigned int m_head;
     unsigned int m_bottom;
     unsigned int m_size;
+
+    bool push(const T entry) {
+        m_data_lock.lock();
+        m_payload[m_head] = entry;
+        m_head = (m_head + 1) % m_size;
+        if(m_head == m_bottom){
+            m_bottom = (m_bottom+1) % m_size;
+        }
+        m_data_lock.unlock();
+        return true;
+    }
 public:
+
     MetawearDataStream(unsigned int maxEntries):
             m_head(0),
             m_bottom(0),
@@ -31,16 +44,6 @@ public:
         delete[] m_payload;
     };
 
-    bool push(const T entry) {
-        m_data_lock.lock();
-        m_payload[m_head] = entry;
-        m_head = (m_head + 1) % m_size;
-        if(m_head == m_bottom){
-            m_bottom = (m_bottom+1) % m_size;
-        }
-        m_data_lock.unlock();
-        return true;
-    }
 
     int size() {
         return m_size;

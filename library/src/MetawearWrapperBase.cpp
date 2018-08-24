@@ -8,11 +8,12 @@
 #include <metawear/core/datasignal.h>
 #include <metawear/platform/memory.h>
 #include <metawear/core/status.h>
+#include <metawear/sensor/gyro_bmi160.h>
 
 #include "MetawearWrapperBase.h"
 
-MetawearWrapperBase::MetawearWrapperBase(const std::string& mac, unsigned int size) :
-    m_mac(mac), m_accelerationStream(size){
+MetawearWrapperBase::MetawearWrapperBase(const std::string& mac) :
+    m_mac(mac), m_accelerationStream(1000),m_gyroStream(1000){
 }
 
 MetawearWrapperBase::~MetawearWrapperBase() {
@@ -94,6 +95,59 @@ void MetawearWrapperBase::configureMetawear() {
         c->epoch = data->epoch;
         wrapper->m_accelerationStream.push(c);
     });
+
+    auto gyro_signal = mbl_mw_gyro_bmi160_get_packed_rotation_data_signal(m_metaWearBoard);
+    mbl_mw_datasignal_subscribe(gyro_signal,this,[](void* context, const MblMwData* data) -> void{
+        auto wrapper = static_cast<MetawearWrapperBase *>(context);
+        auto gyro = static_cast<MblMwCartesianFloat*>(data->value);
+        auto  c = new CartesianFloatContainer();
+        c->x = gyro->x;
+        c->y = gyro->y;
+        c->z = gyro->z;
+        c->epoch = data->epoch;
+        wrapper->m_gyroStream.push(c);
+    });
+}
+
+void MetawearWrapperBase::startGyro(){
+    mbl_mw_gyro_bmi160_enable_rotation_sampling(m_metaWearBoard);
+    mbl_mw_gyro_bmi160_start(m_metaWearBoard);
+}
+
+void MetawearWrapperBase::stopGyro(){
+    mbl_mw_gyro_bmi160_disable_rotation_sampling(m_metaWearBoard);
+    mbl_mw_gyro_bmi160_stop(m_metaWearBoard);
+}
+
+void MetawearWrapperBase::startAccelerometer(){
+    mbl_mw_acc_enable_acceleration_sampling(m_metaWearBoard);
+    mbl_mw_acc_start(m_metaWearBoard);
+}
+
+void MetawearWrapperBase::stopAccelerometer(){
+    mbl_mw_acc_disable_acceleration_sampling(m_metaWearBoard);
+    mbl_mw_acc_stop(m_metaWearBoard);
+}
+
+
+void MetawearWrapperBase::configureGyroscope(MblMwGyroBmi160Range range, MblMwGyroBmi160Odr sample){
+    mbl_mw_gyro_bmi160_set_odr(m_metaWearBoard,sample);
+    mbl_mw_gyro_bmi160_set_range(m_metaWearBoard,range);
+    mbl_mw_gyro_bmi160_write_config(m_metaWearBoard);
+}
+
+void MetawearWrapperBase::configureAccelerometer(float range, float sample){
+    mbl_mw_acc_set_odr(m_metaWearBoard,sample);
+    mbl_mw_acc_set_range(m_metaWearBoard,range);
+    mbl_mw_acc_write_acceleration_config(m_metaWearBoard);
+}
+
+MetawearDataStream<CartesianFloatContainer *>* MetawearWrapperBase::getAccelerationStream(){
+    return &m_accelerationStream;
+}
+
+MetawearDataStream<CartesianFloatContainer*>* MetawearWrapperBase::getGyroStream(){
+    return &m_gyroStream;
 }
 
 const std::string& MetawearWrapperBase::getMacAddress() const{

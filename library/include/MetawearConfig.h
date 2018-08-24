@@ -1,0 +1,8 @@
+//
+// Created by Michael on 8/23/2018.
+//
+
+#ifndef MEX_METAWEAR_METAWEARCONFIG_H
+#define MEX_METAWEAR_METAWEARCONFIG_H
+
+#endif //MEX_METAWEAR_METAWEARCONFIG_H

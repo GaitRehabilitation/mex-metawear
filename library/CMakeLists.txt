@@ -1,14 +1,20 @@
 SET(SOURCE
-        src/MetaMotion.cpp
+        src/MetawearWrapperBase.cpp
+        src/MetawearMexFunction.cpp
         src/MexUtility.cpp
-        src/MetawearWrapperBase.cpp)
+        src/ConnectionHandler.cpp
+        src/FunctionWrapper.cpp)
 SET(INCLUDE
-        include/MetaMotion.h
-        include/MetamotionWrapper.h
+        include/ConnectionHandler.h
+        include/FunctionWrapper.h
+        include/MetawearConfig.h
         include/MetawearDatastream.h
         include/MetawearWrapperBase.h
+        include/MetawearMexFunction.h
         include/MexUtility.h
-        )
+        include/StreamTypes.h)
+
+
 
 
 if (UNIX)
@@ -30,10 +36,9 @@ if (MSVC)
             )
 
     set(PLATFORM_HEADERS
-            platform/windows/include/MetawearWrapper.h
-            )
+            platform/windows/include/MetawearWrapper.h)
     add_compile_options("/std:c++14")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif(MSVC)
 
 include_directories(${Matlab_INCLUDE_DIRS})

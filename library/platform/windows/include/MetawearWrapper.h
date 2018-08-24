@@ -59,7 +59,7 @@ private:
     void cleanup();
 
 public:
-    MetawearWrapper(const std::string& mac, unsigned int size);
+    MetawearWrapper(const std::string& mac);
     ~MetawearWrapper();
     void connect() override;
     void disconnect() override;
