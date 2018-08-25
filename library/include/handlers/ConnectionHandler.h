@@ -11,7 +11,7 @@
 
 class MetawearWrapper;
 class FunctionWrapper;
-class ConnectionHandler{
+class ConnectionHandler {
 private:
     std::map<std::string,MetawearWrapper*> m_devices;
 public:
@@ -21,6 +21,8 @@ public:
     MetawearWrapper* getDevice(const std::string& mac);
     MetawearWrapper* addDevice(const std::string& mac);
     MetawearWrapper* removeDevice(const std::string& mac);
+
+    MetawearWrapper* mexToMetawearWrapper(std::shared_ptr<matlab::engine::MATLABEngine> engine,matlab::data::ObjectArray& o);
 
      static void mexConnect(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
      static void mexDisconnect(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);

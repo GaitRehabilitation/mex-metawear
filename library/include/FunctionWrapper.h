@@ -12,17 +12,39 @@
 #include <map>
 
 class FunctionWrapper;
+class ParameterWrapper;
+typedef void (WrapperMethod)(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context, ParameterWrapper& outputs, ParameterWrapper& inputs);
+typedef struct {
+    char* target;
+    WrapperMethod* wrapper;
+} MethodTable;
 
-class ParameterWrapper{
+
+class FunctionWrapper{
+private:
+    typedef struct {
+        void* context;
+        WrapperMethod* wrapper;
+    } MethodContainer;
+
+    std::map<std::string,MethodContainer*> m_methods;
+public:
+    FunctionWrapper();
+    ~FunctionWrapper();
+    void registerMethod(void* context, const std::map<std::string,WrapperMethod*>& methods);
+    bool invoke(const std::string& key,std::shared_ptr<matlab::engine::MATLABEngine> engine, ParameterWrapper& outputs, ParameterWrapper& inputs);
+};
+
+class ParameterWrapper {
 private:
     std::vector<matlab::data::Array>::iterator m_begin;
     std::vector<matlab::data::Array>::iterator m_end;
 
-    size_t  m_size;
+    size_t m_size;
 public:
 
-    ParameterWrapper( std::vector<matlab::data::Array>::iterator b,  std::vector<matlab::data::Array>::iterator e, size_t size) : m_begin(b), m_end(e), m_size(size) {}
-
+    ParameterWrapper(std::vector<matlab::data::Array>::iterator b, std::vector<matlab::data::Array>::iterator e,
+                     size_t size) : m_begin(b), m_end(e), m_size(size) {}
 
     typename std::iterator_traits<std::vector<matlab::data::Array>::iterator>::difference_type internal_size() {
         return std::distance(m_begin, m_end);
@@ -52,29 +74,6 @@ public:
         return *(m_begin + i);
     }
 };
-
-typedef void (WrapperMethod)(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context, ParameterWrapper& outputs, ParameterWrapper& inputs);
-typedef struct {
-    char* target;
-    WrapperMethod* wrapper;
-} MethodTable;
-
-
-class FunctionWrapper{
-private:
-    typedef struct {
-        void* context;
-        WrapperMethod* wrapper;
-    } MethodContainer;
-
-    std::map<std::string,MethodContainer*> m_methods;
-public:
-    FunctionWrapper();
-    ~FunctionWrapper();
-    void registerMethod(void* context, const std::map<std::string,WrapperMethod*>& methods);
-    bool invoke(const std::string& key,std::shared_ptr<matlab::engine::MATLABEngine> engine, ParameterWrapper& outputs, ParameterWrapper& inputs);
-};
-
 
 
 
