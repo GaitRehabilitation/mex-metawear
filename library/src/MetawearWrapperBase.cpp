@@ -31,19 +31,11 @@ void MetawearWrapperBase::configureMetawear() {
                                         auto *wrapper = static_cast<MetawearWrapperBase *>(context);
 
                                         if (!status) {
-                                            auto dev_info = mbl_mw_metawearboard_get_device_information(
-                                                    wrapper->m_metaWearBoard);
-                                            std::cout << "firmware = " << std::string(dev_info->firmware_revision);
-                                            wrapper->m_firmwareVersion = dev_info->firmware_revision;
-                                            wrapper->m_model = dev_info->model_number;
-                                            mbl_mw_memory_free((void *) dev_info);
-                                            std::cout << "model = " << wrapper->m_model;
                                             std::cout << "Board Initialized";
                                             wrapper->m_ready = true;
 
                                             // subscribe to acceleration handler
-                                            auto acc_signal = mbl_mw_acc_get_packed_acceleration_data_signal(
-                                                    wrapper->m_metaWearBoard);
+                                            auto acc_signal = mbl_mw_acc_get_packed_acceleration_data_signal(wrapper->m_metaWearBoard);
                                             mbl_mw_datasignal_subscribe(acc_signal, wrapper, [](void *context,
                                                                                                 const MblMwData *data) -> void {
                                                 auto w = static_cast<MetawearWrapperBase *>(context);
@@ -155,4 +147,9 @@ MetawearDataStream<CartesianFloatContainer>* MetawearWrapperBase::getGyroStream(
 
 const std::string& MetawearWrapperBase::getMacAddress() const{
     return m_mac;
+}
+
+
+MblMwMetaWearBoard * MetawearWrapperBase::getBoard(){
+    return m_metaWearBoard;
 }

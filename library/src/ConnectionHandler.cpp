@@ -22,8 +22,7 @@ ConnectionHandler::~ConnectionHandler() {
 MetawearWrapper* ConnectionHandler::getDevice(const std::string& mac){
     auto  it = m_devices.find(mac);
     if (it != m_devices.end()) {
-        if (it != m_devices.end())
-            return it->second;
+        return it->second;
     }
     return nullptr;
 }
@@ -34,33 +33,25 @@ MetawearWrapper* ConnectionHandler::addDevice(const std::string& mac){
     return wrapper;
 }
 
-MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac){
+MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
     auto item = getDevice(mac);
-    if(item != nullptr)
+    if (item != nullptr)
         m_devices.erase(mac);
     return item;
 
 }
 
-
  void ConnectionHandler::mexConnect(std::shared_ptr<matlab::engine::MATLABEngine> engine,
          void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
      auto *handler = static_cast<ConnectionHandler *>(context);
 
-     if (inputs.size() != 2) {
+     if (inputs.size() != 2)
          MexUtility::error(engine, "Two Inputs Required");
-         return;
-     }
-
-     if (outputs.size() != 1) {
+     if (outputs.size() != 1)
          MexUtility::error(engine, "Single argument for output");
-         return;
-     }
-
-     if (inputs[1].getType() != matlab::data::ArrayType::CHAR) {
+     if (inputs[1].getType() != matlab::data::ArrayType::CHAR)
          MexUtility::error(engine, "Second Parameter has to be string type");
-         return;
-     }
+
      matlab::data::CharArray address = inputs[1];
 
      // standard IEEE 802 format for MAC-48 address. verify if the format is correct.

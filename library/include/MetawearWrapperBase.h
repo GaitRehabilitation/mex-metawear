@@ -53,6 +53,7 @@ public:
      MetawearDataStream<CartesianFloatContainer>* getAccelerationStream();
     MetawearDataStream<CartesianFloatContainer>* getGyroStream();
 
+    MblMwMetaWearBoard * getBoard();
 
 };
 

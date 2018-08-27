@@ -64,16 +64,16 @@ void CaptureHandler::mexDisableGyro(std::shared_ptr<matlab::engine::MATLABEngine
     wrapper->stopGyro();
 }
 
-void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
-    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
+    CaptureHandler *handler = static_cast<CaptureHandler *>(context);
 
-    if(inputs.size() != 2){
+    if (inputs.size() != 2) {
         MexUtility::error(engine, "Three Inputs Required");
         return;
     }
 
-    matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    matlab::data::CharArray address = inputs[1];
+    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
 
     wrapper->stopAccelerometer();
 }
