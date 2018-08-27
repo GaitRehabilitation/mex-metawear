@@ -29,8 +29,8 @@ void CaptureHandler::mexEnableGyro(std::shared_ptr<matlab::engine::MATLABEngine>
         return;
     }
 
-    matlab::data::ObjectArray o =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexToMetawearWrapper(engine,o);
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
 
     wrapper->startGyro();
 }
@@ -43,8 +43,8 @@ void  CaptureHandler::mexEnableAccelerometer(std::shared_ptr<matlab::engine::MAT
         return;
     }
 
-    matlab::data::ObjectArray o =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexToMetawearWrapper(engine,o);
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
 
     wrapper->startAccelerometer();
 }
@@ -58,8 +58,8 @@ void CaptureHandler::mexDisableGyro(std::shared_ptr<matlab::engine::MATLABEngine
         return;
     }
 
-    matlab::data::ObjectArray o =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexToMetawearWrapper(engine,o);
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
 
     wrapper->stopGyro();
 }
@@ -72,8 +72,8 @@ void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MAT
         return;
     }
 
-    matlab::data::ObjectArray o =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexToMetawearWrapper(engine,o);
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
 
     wrapper->stopAccelerometer();
 }

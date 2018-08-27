@@ -18,12 +18,14 @@ protected:
     std::string m_firmwareVersion;
     std::string m_model;
 
+    volatile bool m_ready;
+
     std::string m_mac;
     bool m_isMetawerReady;
     MblMwMetaWearBoard *m_metaWearBoard;
 
-    MetawearDataStream<CartesianFloatContainer*> m_accelerationStream;
-    MetawearDataStream<CartesianFloatContainer*> m_gyroStream;
+    MetawearDataStream<CartesianFloatContainer> m_accelerationStream;
+    MetawearDataStream<CartesianFloatContainer> m_gyroStream;
 public:
 
 
@@ -43,11 +45,13 @@ public:
     void configureGyroscope(MblMwGyroBmi160Range range, MblMwGyroBmi160Odr sample);
     void configureAccelerometer(float range, float sample);
 
+    bool isReady();
+
     virtual void connect() = 0;
     virtual void disconnect() = 0;
 
-     MetawearDataStream<CartesianFloatContainer *>* getAccelerationStream();
-    MetawearDataStream<CartesianFloatContainer*>* getGyroStream();
+     MetawearDataStream<CartesianFloatContainer>* getAccelerationStream();
+    MetawearDataStream<CartesianFloatContainer>* getGyroStream();
 
 
 };

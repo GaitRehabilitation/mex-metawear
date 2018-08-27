@@ -10,7 +10,7 @@
 class MexUtility {
 public:
     static void error(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr, std::string error);
-
+    static void printf(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr, std::string output);
 private:
     MexUtility() = default;
 };

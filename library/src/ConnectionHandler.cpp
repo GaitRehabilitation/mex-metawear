@@ -15,10 +15,16 @@ ConnectionHandler::ConnectionHandler(FunctionWrapper* wrapper): m_devices() {
     wrapper->registerMethod(this, functions);
 }
 
+ConnectionHandler::~ConnectionHandler() {
+
+}
+
 MetawearWrapper* ConnectionHandler::getDevice(const std::string& mac){
     auto  it = m_devices.find(mac);
-    if (it != m_devices.end())
-        return it->second;
+    if (it != m_devices.end()) {
+        if (it != m_devices.end())
+            return it->second;
+    }
     return nullptr;
 }
 
@@ -36,13 +42,10 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac){
 
 }
 
-ConnectionHandler::~ConnectionHandler() {
-
-}
 
  void ConnectionHandler::mexConnect(std::shared_ptr<matlab::engine::MATLABEngine> engine,
          void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
-     ConnectionHandler *handler = static_cast<ConnectionHandler *>(context);
+     auto *handler = static_cast<ConnectionHandler *>(context);
 
      if (inputs.size() != 2) {
          MexUtility::error(engine, "Two Inputs Required");
@@ -67,27 +70,15 @@ ConnectionHandler::~ConnectionHandler() {
          return;
      }
      matlab::data::ArrayFactory factory;
-     matlab::data::ObjectArray result(factory.createEmptyArray());
-     // set the address property for result
-     engine->setProperty(result, "address", address);
-     outputs[0] = result;
+     matlab::data::CharArray addressCharArray = factory.createCharArray(address.toAscii());
+     outputs[0] = addressCharArray;
 
+     MexUtility::printf(engine, "Starting Connection \n");
      MetawearWrapper *wrapper = handler->addDevice(address.toAscii());
      wrapper->connect();
+
+     MexUtility::printf(engine, "Connection established \n");
  }
-
-
-MetawearWrapper* ConnectionHandler::mexToMetawearWrapper(std::shared_ptr<matlab::engine::MATLABEngine> engine,matlab::data::ObjectArray& o){
-    try {
-        matlab::data::CharArray address = engine->getProperty(o, "address");
-        return getDevice(address.toAscii());
-    }
-    catch(matlab::engine::MATLABExecutionException e){
-        MexUtility::error(engine,"Unknown handler");
-    }
-    return nullptr;
-}
-
 
 void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
     ConnectionHandler* handler = static_cast<ConnectionHandler*>(context);
@@ -95,7 +86,7 @@ void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEng
         MexUtility::error(engine, "Two Inputs Required");
         return;
     }
-    matlab::data::ObjectArray o =  inputs[1];
-    MetawearWrapper* wrapper =  handler->mexToMetawearWrapper(engine,o);
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->getDevice(address.toAscii());
     wrapper->disconnect();
 }

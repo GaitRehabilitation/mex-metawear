@@ -14,6 +14,7 @@
 #include <Windows.Devices.Bluetooth.h>
 #include <Windows.Devices.Bluetooth.Advertisement.h>
 #include <wrl/wrappers/corewrappers.h>
+#include <mex.hpp>
 
 
 using namespace concurrency;
@@ -21,6 +22,8 @@ using namespace Windows::Devices::Bluetooth;
 using namespace Windows::Devices::Bluetooth::Advertisement;
 using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
 using namespace Windows::Security::Cryptography;
+
+static   Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
 
 class MetawearWrapper: public MetawearWrapperBase{
 private:
@@ -37,14 +40,7 @@ private:
 
     std::unordered_map<Platform::Guid, GattDeviceService^, Hasher, EqualFn> m_services;
     std::unordered_map<Platform::Guid, GattCharacteristic^, Hasher, EqualFn> m_characterstics;
-
-    std::string m_mac;
     BluetoothLEDevice^ m_device;
-
-    task_completion_event<void> m_discover_device_event;
-    task<void> m_event_set;
-
-    GattCharacteristic^  findCharacterstic( uint64_t low, uint64_t high);
 
     static void read_gatt_char(void *context, const void *caller, const MblMwGattChar *characteristic,
                                MblMwFnIntVoidPtrArray handler);
@@ -56,10 +52,12 @@ private:
                                    MblMwFnIntVoidPtrArray handler, MblMwFnVoidVoidPtrInt ready);
 
     static void on_disconnect(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler);
+    GattCharacteristic^  findCharacterstic( uint64_t low, uint64_t high);
     void cleanup();
+    void startDiscovery();
 
 public:
-    MetawearWrapper(const std::string& mac);
+    explicit MetawearWrapper(const std::string& mac);
     ~MetawearWrapper();
     void connect() override;
     void disconnect() override;

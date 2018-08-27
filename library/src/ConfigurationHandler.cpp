@@ -18,39 +18,54 @@ ConfigurationHandler::ConfigurationHandler(ConnectionHandler* connectionHandler,
 
 
 
+void ConfigurationHandler::mexConfigureAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,
+        ParameterWrapper& outputs, ParameterWrapper& inputs){
+    ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
+
+    if(inputs.size() != 4)
+        MexUtility::error(engine, "Four Inputs Required");
+    if (inputs[1].getType() != matlab::data::ArrayType::CHAR)
+        MexUtility::error(engine, "Parameter 1 must be type string");
+    if (inputs[2].getType() != matlab::data::ArrayType::DOUBLE)
+        MexUtility::error(engine,"Parameter 2 must be type double");
+    if (inputs[3].getType() != matlab::data::ArrayType::DOUBLE)
+        MexUtility::error(engine, "Parameter 3 must be type double");
+
+    matlab::data::CharArray address =  inputs[1];
+    matlab::data::TypedArray<double> range = inputs[2];
+    matlab::data::TypedArray<double> samples = inputs[3];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr){
+        MexUtility::error(engine, "Invalid wrapper");
+    }
+    MexUtility::printf(engine,"configuring accelerometer with range: " + std::to_string((float)range[0]) + "g's samples:"+ std::to_string((float)samples[0]) + "Hz \n");
+    wrapper->configureAccelerometer((float)range[0],(float)samples[1]);
+}
 void ConfigurationHandler::mexConfigureGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
     ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
 
-    if(inputs.size() != 3){
-        MexUtility::error(engine, "Four Inputs Required");
-        return;
-    }
-
-    matlab::data::ObjectArray o =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexToMetawearWrapper(engine,o);
-
-    matlab::data::TypedArray<double> d = inputs[2];
-    if(d.getNumberOfElements() != 2){
-        MexUtility::error(engine, "Range and sample rate is required");
-        return;
-    }
-    wrapper->configureAccelerometer((float)d[0],(float)d[1]);
-}
-void ConfigurationHandler::mexConfigureAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
-    ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
-
     if(inputs.size() != 4){
-        MexUtility::error(engine, "Four Inputs Required");
+        MexUtility::error(engine, "Three Inputs Required");
         return;
     }
+    if (inputs[1].getType() != matlab::data::ArrayType::CHAR)
+        MexUtility::error(engine,"Parameter 1 must be type char");
+    if (inputs[2].getType() != matlab::data::ArrayType::DOUBLE)
+        MexUtility::error(engine,"Parameter 2 must be type double");
+    if (inputs[3].getType() != matlab::data::ArrayType::DOUBLE)
+        MexUtility::error(engine,"Parameter 3 must be type double");
 
-    matlab::data::ObjectArray o =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexToMetawearWrapper(engine,o);
+    matlab::data::CharArray address =  inputs[1];
+    matlab::data::TypedArray<double> s = inputs[2];
+    matlab::data::TypedArray<double> r = inputs[3];
 
-    matlab::data::TypedArray<int16_t> d = inputs[2];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr){
+        MexUtility::error(engine, "Invalid wrapper");
+    }
     MblMwGyroBmi160Odr sample;
     MblMwGyroBmi160Range range;
-    switch(d[0]){
+    switch((int)s[0]){
         case 25:
             sample = MBL_MW_GYRO_BMI160_ODR_25Hz;
             break;
@@ -80,7 +95,7 @@ void ConfigurationHandler::mexConfigureAccelerometer(std::shared_ptr<matlab::eng
             return;
     }
 
-    switch(d[1]){
+    switch((int)r[1]){
         case 2000:
             range = MBL_MW_GYRO_BMI160_RANGE_2000dps;
             break;
@@ -100,6 +115,8 @@ void ConfigurationHandler::mexConfigureAccelerometer(std::shared_ptr<matlab::eng
             MexUtility::error(engine, "Gyro supported ranges: 2000dps, 1000dps, 500dps, 250dps, 125dps ");
             return;
     }
+    MexUtility::printf(engine,"configuring gyro with range: " + std::to_string((int)r[1]) + " samples:"+ std::to_string((int)s[0]) + "\n");
+
     wrapper->configureGyroscope(range,sample);
 
 }
