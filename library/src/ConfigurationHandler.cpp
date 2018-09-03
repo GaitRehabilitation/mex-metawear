@@ -18,12 +18,27 @@
 #include <MetawearWrapper.h>
 #include "handlers/ConfigurationHandler.h"
 #include "handlers/ConnectionHandler.h"
+#include <metawear/core/settings.h>
+#include <metawear/sensor/accelerometer.h>
+#include <metawear/core/datasignal.h>
+#include <metawear/platform/memory.h>
+#include <metawear/core/status.h>
+#include <metawear/sensor/gyro_bmi160.h>
+#include <metawear/sensor/magnetometer_bmm150.h>
 
 ConfigurationHandler::ConfigurationHandler(ConnectionHandler* connectionHandler,FunctionWrapper* wrapper) :
         m_connectionHandler(connectionHandler){
     std::map<std::string, WrapperMethod *> functions =  {
             {"configure_gyro", mexConfigureGyro},
-            {"configure_accelerometer", mexConfigureAccelerometer}
+            {"configure_accelerometer", mexConfigureAccelerometer},
+            {"configure_ambient_light",mexConfigureAmbientLight},
+            {"configure_barometer",mexConfigureBarometer},
+            {"configure_color",mexConfigureAccelerometer},
+            {"configure_humidity",mexConfigureHumidity},
+            {"configure_magnetometer",mexConfigureMagnetometer},
+            {"configure_proximity",mexConfigureProximity},
+            {"configure_fusion",mexConfigureSensorFusion}
+
     };
     wrapper->registerMethod(this, functions);
 }
@@ -51,7 +66,11 @@ void ConfigurationHandler::mexConfigureAccelerometer(std::shared_ptr<matlab::eng
         MexUtility::error(engine, "Invalid wrapper");
     }
     MexUtility::printf(engine,"configuring accelerometer with range: " + std::to_string((float)range[0]) + "g's samples:"+ std::to_string((float)samples[0]) + "Hz \n");
-    wrapper->configureAccelerometer((float)range[0],(float)samples[1]);
+    auto  board = wrapper->getBoard();
+    mbl_mw_acc_set_odr(board ,(float)samples[0]);
+    mbl_mw_acc_set_range(board ,(float)range[0]);
+    mbl_mw_acc_write_acceleration_config(board );
+
 }
 void ConfigurationHandler::mexConfigureGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
     ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
@@ -72,9 +91,8 @@ void ConfigurationHandler::mexConfigureGyro(std::shared_ptr<matlab::engine::MATL
     matlab::data::TypedArray<double> r = inputs[3];
 
     MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr){
-        MexUtility::error(engine, "Invalid wrapper");
-    }
+    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+
     MblMwGyroBmi160Odr sample;
     MblMwGyroBmi160Range range;
     switch((int)s[0]){
@@ -107,7 +125,7 @@ void ConfigurationHandler::mexConfigureGyro(std::shared_ptr<matlab::engine::MATL
             return;
     }
 
-    switch((int)r[1]){
+    switch((int)r[0]){
         case 2000:
             range = MBL_MW_GYRO_BMI160_RANGE_2000dps;
             break;
@@ -127,11 +145,43 @@ void ConfigurationHandler::mexConfigureGyro(std::shared_ptr<matlab::engine::MATL
             MexUtility::error(engine, "Gyro supported ranges: 2000dps, 1000dps, 500dps, 250dps, 125dps ");
             return;
     }
-    MexUtility::printf(engine,"configuring gyro with range: " + std::to_string((int)r[1]) + " samples:"+ std::to_string((int)s[0]) + "\n");
+    MexUtility::printf(engine,"configuring gyro with range: " + std::to_string((int)r[0]) + " samples:"+ std::to_string((int)s[0]) + "\n");
 
-    wrapper->configureGyroscope(range,sample);
+    auto  board = wrapper->getBoard();
+    mbl_mw_gyro_bmi160_set_odr(board,sample);
+    mbl_mw_gyro_bmi160_set_range(board,range);
+    mbl_mw_gyro_bmi160_write_config(board);
+}
+
+
+void ConfigurationHandler::mexConfigureBarometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
 
 }
+
+void ConfigurationHandler::mexConfigureSensorFusion(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+
+}
+
+void ConfigurationHandler::mexConfigureMagnetometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+
+}
+
+void ConfigurationHandler::mexConfigureProximity(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+
+}
+
+void ConfigurationHandler::mexConfigureAmbientLight(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+
+}
+
+void ConfigurationHandler::mexConfigureTemperature(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+
+}
+
+void ConfigurationHandler::mexConfigureHumidity(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+
+}
+
 
 
 

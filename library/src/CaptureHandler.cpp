@@ -16,6 +16,7 @@
 
 #include <MexUtility.h>
 #include <MetawearWrapper.h>
+#include <metawear/sensor/accelerometer.h>
 #include "handlers/CaptureHandler.h"
 #include "handlers/ConnectionHandler.h"
 
@@ -44,8 +45,9 @@ void CaptureHandler::mexEnableGyro(std::shared_ptr<matlab::engine::MATLABEngine>
 
     matlab::data::CharArray address =  inputs[1];
     MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-
-    wrapper->startGyro();
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+    mbl_mw_gyro_bmi160_enable_rotation_sampling(board);
+    mbl_mw_gyro_bmi160_start(board);
 }
 
 void  CaptureHandler::mexEnableAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
@@ -58,8 +60,9 @@ void  CaptureHandler::mexEnableAccelerometer(std::shared_ptr<matlab::engine::MAT
 
     matlab::data::CharArray address =  inputs[1];
     MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-
-    wrapper->startAccelerometer();
+    MblMwMetaWearBoard* board = wrapper->getBoard();
+    mbl_mw_acc_enable_acceleration_sampling(board);
+    mbl_mw_acc_start(board);
 }
 
 
@@ -73,8 +76,9 @@ void CaptureHandler::mexDisableGyro(std::shared_ptr<matlab::engine::MATLABEngine
 
     matlab::data::CharArray address =  inputs[1];
     MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-
-    wrapper->stopGyro();
+    MblMwMetaWearBoard* board = wrapper->getBoard();
+    mbl_mw_gyro_bmi160_disable_rotation_sampling(board);
+    mbl_mw_gyro_bmi160_stop(board);
 }
 
 void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
@@ -87,8 +91,9 @@ void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MAT
 
     matlab::data::CharArray address = inputs[1];
     MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
-
-    wrapper->stopAccelerometer();
+    MblMwMetaWearBoard* board = wrapper->getBoard();
+    mbl_mw_acc_disable_acceleration_sampling(board);
+    mbl_mw_acc_stop(board);
 }
 
 

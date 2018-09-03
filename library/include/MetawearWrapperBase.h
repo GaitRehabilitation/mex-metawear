@@ -38,6 +38,14 @@ protected:
 
     MetawearDataStream<CartesianFloatContainer> m_accelerationStream;
     MetawearDataStream<CartesianFloatContainer> m_gyroStream;
+//    MetawearDataStream<CartesianFloatContainer> m_barometerStream;
+//    MetawearDataStream<CartesianFloatContainer> m_ambientLightStream;
+//    MetawearDataStream<CartesianFloatContainer> m_colorStream;
+//    MetawearDataStream<CartesianFloatContainer> m_temperatureStream;
+    MetawearDataStream<CartesianFloatContainer> m_magnetometer;
+//    MetawearDataStream<CartesianFloatContainer> m_sensorFusion;
+
+
 public:
 
 
@@ -47,16 +55,6 @@ public:
     const std::string& getMacAddress() const;
 
     void configureMetawear();
-
-    void startGyro();
-    void startAccelerometer();
-
-    void stopGyro();
-    void stopAccelerometer();
-
-    void configureGyroscope(MblMwGyroBmi160Range range, MblMwGyroBmi160Odr sample);
-    void configureAccelerometer(float range, float sample);
-
     bool isReady();
 
     virtual void connect() = 0;
