@@ -18,11 +18,20 @@
 #define MEX_METAWEAR_MEXUTILITY_H
 
 #include <mex.hpp>
+#include <MatlabDataArray/ArrayType.hpp>
 
 class MexUtility {
 public:
+    enum ParameterType{
+        INPUT,
+        OUTPUT
+    };
     static void error(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr, std::string error);
     static void printf(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr, std::string output);
+    static std::string typeToString(matlab::data::ArrayType type);
+    static void checkType(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr,ParameterType parameterType,int index,matlab::data::ArrayType current,matlab::data::ArrayType target);
+    static void checkNumberOfParameters(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr, ParameterType parameterType, size_t current, size_t target);
+
 private:
     MexUtility() = default;
 };
