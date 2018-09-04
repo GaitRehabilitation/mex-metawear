@@ -3,7 +3,10 @@ SET(SOURCE
         src/MetawearMexFunction.cpp
         src/MexUtility.cpp
         src/ConnectionHandler.cpp
-        src/FunctionWrapper.cpp src/ConfigurationHandler.cpp src/QueryHandler.cpp src/CaptureHandler.cpp)
+        src/FunctionWrapper.cpp
+        src/ConfigurationHandler.cpp
+        src/QueryHandler.cpp
+        src/CaptureHandler.cpp)
 SET(INCLUDE
         include/FunctionWrapper.h
         include/MetawearConfig.h
@@ -15,7 +18,7 @@ SET(INCLUDE
         include/handlers/ConfigurationHandler.h
         include/handlers/CaptureHandler.h
         include/handlers/QueryHandler.h
-        include/handlers/ConnectionHandler.h include/endpoint/StreamHandler.h include/endpoint/LogHandler.h include/endpoint/Endpoint.h include/signals/SignalWrapper.h)
+        include/handlers/ConnectionHandler.h)
 
 
 

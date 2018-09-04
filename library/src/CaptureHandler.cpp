@@ -17,6 +17,7 @@
 #include <MexUtility.h>
 #include <MetawearWrapper.h>
 #include <metawear/sensor/accelerometer.h>
+#include <metawear/sensor/magnetometer_bmm150.h>
 #include "handlers/CaptureHandler.h"
 #include "handlers/ConnectionHandler.h"
 
@@ -26,25 +27,54 @@ CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWra
             //enable
             {"enable_gyro", mexEnableGyro},
             {"enable_accelerometer", mexEnableAccelerometer},
+            {"enable_magnetometer", mexEnableMagnetometer},
 
             //disable
             {"disable_gyro",mexDisableGyro},
-            {"disable_accelerometer",mexDisableGyro}
+            {"disable_accelerometer",mexDisableAccelerometer},
+            {"disable_magnetometer", mexDisableMagnetometer}
     };
     wrapper->registerMethod(this, functions);
 }
 
-void CaptureHandler::mexEnableGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context,
-                                    ParameterWrapper &outputs, ParameterWrapper &inputs) {
+void CaptureHandler::mexEnableMagnetometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
     CaptureHandler* handler = static_cast<CaptureHandler*>(context);
-
-    if(inputs.size() != 2){
-        MexUtility::error(engine, "Three Inputs Required");
-        return;
-    }
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
     MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    mbl_mw_mag_bmm150_enable_b_field_sampling(board);
+    mbl_mw_mag_bmm150_start(board);
+}
+
+void CaptureHandler::mexDisableMagnetometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    mbl_mw_mag_bmm150_disable_b_field_sampling(board);
+    mbl_mw_mag_bmm150_stop(board);
+}
+
+
+void CaptureHandler::mexEnableGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context,
+                                    ParameterWrapper &outputs, ParameterWrapper &inputs) {
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_enable_rotation_sampling(board);
     mbl_mw_gyro_bmi160_start(board);

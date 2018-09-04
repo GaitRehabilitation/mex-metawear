@@ -84,9 +84,7 @@ void QueryHandler::mexQueryAccelerometer(std::shared_ptr<matlab::engine::MATLABE
 
     matlab::data::CharArray address =  inputs[1];
     MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr){
-        MexUtility::error(engine, "Invalid wrapper");
-    }
+    if(wrapper == nullptr)  MexUtility::error(engine, "Invalid wrapper");
 
     MetawearDataStream<CartesianFloatContainer>* stream = wrapper->getAccelerationStream();
     std::vector<CartesianFloatContainer> values = stream->dump();
