@@ -230,7 +230,6 @@ void ConfigurationHandler::mexConfigureMagnetometerPowerPreset(std::shared_ptr<m
     if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_mag_bmm150_set_preset(board,preset);
-
 }
 
 void ConfigurationHandler::mexConfigureBarometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){

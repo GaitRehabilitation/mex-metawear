@@ -46,6 +46,7 @@ protected:
 //    MetawearDataStream<CartesianFloatContainer> m_sensorFusion;
 
 
+
 public:
 
 

@@ -15,7 +15,7 @@ SET(INCLUDE
         include/handlers/ConfigurationHandler.h
         include/handlers/CaptureHandler.h
         include/handlers/QueryHandler.h
-        include/handlers/ConnectionHandler.h)
+        include/handlers/ConnectionHandler.h include/endpoint/StreamHandler.h include/endpoint/LogHandler.h include/endpoint/Endpoint.h include/signals/SignalWrapper.h)
 
 
 

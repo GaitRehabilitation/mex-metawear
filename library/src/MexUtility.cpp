@@ -26,7 +26,7 @@ void MexUtility::error(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr,c
 void MexUtility::printf(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr, const std::string output){
     matlab::data::ArrayFactory factory;
 
-    // Pass stream content to MATLAB fprintf function
+    // Pass endpoint content to MATLAB fprintf function
     matlabPtr->feval(matlab::engine::convertUTF8StringToUTF16String("fprintf"), 0,
                      std::vector<matlab::data::Array>({factory.createScalar(output)}));
 }

@@ -47,7 +47,6 @@ void MetawearWrapperBase::configureMetawear() {
                                         if (!status) {
                                             std::cout << "Board Initialized";
                                             wrapper->m_ready = true;
-
                                             // subscribe to acceleration handler
                                             auto acc_signal = mbl_mw_acc_get_packed_acceleration_data_signal(wrapper->m_metaWearBoard);
                                             mbl_mw_datasignal_subscribe(acc_signal, wrapper, [](void *context,
@@ -61,7 +60,6 @@ void MetawearWrapperBase::configureMetawear() {
                                                 c.epoch = data->epoch;
                                                 w->m_accelerationStream.push(c);
                                             });
-
                                             auto gyro_signal = mbl_mw_gyro_bmi160_get_packed_rotation_data_signal( wrapper->m_metaWearBoard);
                                             mbl_mw_datasignal_subscribe(gyro_signal, wrapper, [](void *context,
                                                                                                  const MblMwData *data) -> void {
