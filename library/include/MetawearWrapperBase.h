@@ -23,8 +23,8 @@
 #include <metawear/sensor/gyro_bmi160.h>
 #include "StreamTypes.h"
 #include "MetawearDatastream.h"
-
-
+#include "StreamHandler.h"
+#include <map>
 class MetawearWrapperBase{
 protected:
     std::string m_firmwareVersion;
@@ -45,9 +45,14 @@ protected:
     MetawearDataStream<CartesianFloatContainer> m_magnetometer;
 //    MetawearDataStream<CartesianFloatContainer> m_sensorFusion;
 
+    std::map<std::string ,StreamHandler*> m_handlers;
 
 
 public:
+
+    void registerHandler(const std::string&,StreamHandler*);
+    void removeHandler(const std::string&);
+    StreamHandler* getHandler(const std::string&);
 
 
     MetawearWrapperBase(const std::string& mac);

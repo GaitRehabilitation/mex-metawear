@@ -35,7 +35,6 @@ MexFunction::MexFunction() : matlab::mex::Function(),
     m_functionWrapper(new FunctionWrapper()){
 
     std::cout.rdbuf(m_ostream.rdbuf());
-
     m_connectionHandler = new ConnectionHandler(m_functionWrapper);
     m_configurationHandler = new ConfigurationHandler(m_connectionHandler,m_functionWrapper);
     m_captureHandler = new CaptureHandler(m_connectionHandler,m_functionWrapper);

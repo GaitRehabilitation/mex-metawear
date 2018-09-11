@@ -74,45 +74,43 @@ void QueryHandler::mexQueryGyro(std::shared_ptr<matlab::engine::MATLABEngine> en
     outputs[3] = factory.createArray({1,z.size()},z.begin(),z.end());
 }
 
-void QueryHandler::mexQueryAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
-    auto * handler = static_cast<QueryHandler*>(context);
+void QueryHandler::mexQueryAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
+    auto *handler = static_cast<QueryHandler *>(context);
 
-    if(inputs.size() != 2)
+    if (inputs.size() != 2)
         MexUtility::error(engine, "Three Inputs Required");
-    if(outputs.size() != 4)
+    if (outputs.size() != 4)
         MexUtility::error(engine, "Four Outputs Required");
 
-    matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Invalid wrapper");
+    matlab::data::CharArray address = inputs[1];
+    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
+    if (wrapper == nullptr) MexUtility::error(engine, "Invalid wrapper");
 
-    MetawearDataStream<CartesianFloatContainer>* stream = wrapper->getAccelerationStream();
+    MetawearDataStream<CartesianFloatContainer> *stream = wrapper->getAccelerationStream();
     std::vector<CartesianFloatContainer> values = stream->dump();
 
-    MexUtility::printf(engine,"number of entries queried: " + std::to_string(values.size()) + "\n");
+    MexUtility::printf(engine, "number of entries queried: " + std::to_string(values.size()) + "\n");
 
     matlab::data::ArrayFactory factory;
 
-    matlab::data::TypedArray<int64_t> epochs =  factory.createArray<int64_t>({1,values.size()});
-    matlab::data::TypedArray<double> x =  factory.createArray<double>({1,values.size()});
-    matlab::data::TypedArray<double> y =  factory.createArray<double>({1,values.size()});
-    matlab::data::TypedArray<double> z =  factory.createArray<double>({1,values.size()});
+    matlab::data::TypedArray<int64_t> epochs = factory.createArray<int64_t>({1, values.size()});
+    matlab::data::TypedArray<double> x = factory.createArray<double>({1, values.size()});
+    matlab::data::TypedArray<double> y = factory.createArray<double>({1, values.size()});
+    matlab::data::TypedArray<double> z = factory.createArray<double>({1, values.size()});
 
 
     //factory.createArray<uint64_t>({1, values.size()},);
-    for(auto i = 0; i != values.size(); i++) {
+    for (auto i = 0; i != values.size(); i++) {
         CartesianFloatContainer value = values[i];
         epochs[i] = value.epoch;
         x[i] = value.x;
         y[i] = value.y;
         z[i] = value.z;
     }
-
     outputs[0] = epochs;
     outputs[1] = x;
     outputs[2] = y;
     outputs[3] = z;
-
 }
 
 void QueryHandler::mexQueryBoardInfo(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
@@ -136,12 +134,9 @@ void QueryHandler::mexQueryBoardInfo(std::shared_ptr<matlab::engine::MATLABEngin
     MexUtility::printf(engine, "Manufacture:  " + std::string(dev_info->manufacturer) + "\n");
     mbl_mw_memory_free((void *) dev_info);
 
-
     for (auto it = board->module_config.begin(); it != board->module_config.end(); ++it) {
         MexUtility::printf(engine, "module configs:  " + std::to_string(it->first) + "\n");
     }
-
-
 }
 
 QueryHandler::~QueryHandler() {

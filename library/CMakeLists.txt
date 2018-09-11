@@ -6,7 +6,8 @@ SET(SOURCE
         src/FunctionWrapper.cpp
         src/ConfigurationHandler.cpp
         src/QueryHandler.cpp
-        src/CaptureHandler.cpp)
+        src/CaptureHandler.cpp
+        src/StreamHandler.cpp)
 SET(INCLUDE
         include/FunctionWrapper.h
         include/MetawearConfig.h
@@ -18,7 +19,8 @@ SET(INCLUDE
         include/handlers/ConfigurationHandler.h
         include/handlers/CaptureHandler.h
         include/handlers/QueryHandler.h
-        include/handlers/ConnectionHandler.h)
+        include/handlers/ConnectionHandler.h
+        include/StreamHandler.h)
 
 
 

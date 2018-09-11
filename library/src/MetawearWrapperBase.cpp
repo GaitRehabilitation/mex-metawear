@@ -27,7 +27,12 @@
 #include "MetawearWrapperBase.h"
 
 MetawearWrapperBase::MetawearWrapperBase(const std::string& mac) :
-    m_mac(mac), m_accelerationStream(1000),m_gyroStream(1000),m_magnetometer(1000),m_ready(false){
+    m_handlers(),
+    m_mac(mac),
+    m_accelerationStream(1000),
+    m_gyroStream(1000),
+    m_magnetometer(1000),
+    m_ready(false){
 }
 
 MetawearWrapperBase::~MetawearWrapperBase() {
@@ -37,6 +42,18 @@ MetawearWrapperBase::~MetawearWrapperBase() {
 bool MetawearWrapperBase::isReady() {
     return m_ready;
 }
+
+
+void MetawearWrapperBase::registerHandler(const std::string& key,StreamHandler* handler){
+
+}
+void MetawearWrapperBase::removeHandler(const std::string& key){
+
+}
+StreamHandler* MetawearWrapperBase::getHandler(const std::string& key){
+    return nullptr;
+}
+
 
 void MetawearWrapperBase::configureMetawear() {
 
