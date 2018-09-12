@@ -110,7 +110,6 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
     CaptureHandler *handler = static_cast<CaptureHandler *>(context);
 
     MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::INPUT, inputs.size(), 3);
-    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 1);
     MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 1, inputs[1].getType(),
                           matlab::data::ArrayType::CHAR);
     MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 2, inputs[2].getType(),
@@ -122,10 +121,145 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
     if (wrapper == nullptr) MexUtility::error(engine, "Unknown Sensor");
 
     StreamHandler* streamHandler = wrapper->getHandler(key.toAscii());
+    //lock stream so data can retrieved without being modified
+    if(streamHandler->isEmpty()){
+        matlab::data::ArrayFactory factory;
+        for(int x = 0; x < outputs.size(); ++x) {
+            matlab::data::TypedArray<double> empty = factory.createArray<double>({1, 0});
+            outputs[x] = empty;
+        }
+    }
+    else {
+        MblMwDataTypeId target = streamHandler->peek()->getType();
+        switch (target) {
+            case MblMwDataTypeId::MBL_MW_DT_ID_UINT32:
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_FLOAT:
 
-    streamHandler->empty(handler,[](void* context, const StreamEntry& entry){
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_CARTESIAN_FLOAT: {
+                MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 4);
+                streamHandler->lockStream();
+                matlab::data::ArrayFactory factory;
+                matlab::data::TypedArray<int64_t> epochs = factory.createArray<int64_t>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> x = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> y = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> z = factory.createArray<double>({1, streamHandler->size()});
+                unsigned int i = 0;
+                while (!streamHandler->isEmpty()) {
+                    auto entry = streamHandler->peek();
+                    streamHandler->pop();
+                    auto c = (MblMwCartesianFloat *) entry->getData();
+                    epochs[i] = entry->getEpoch();
 
-    });
+                    x[i] = c->x;
+                    y[i] = c->y;
+                    z[i] = c->z;
+                    free(entry);
+                    ++i;
+                }
+                streamHandler->unLockStream();
+                outputs[0] = epochs;
+                outputs[1] = x;
+                outputs[2] = y;
+                outputs[3] = z;
+            }
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_EULER_ANGLE: {
+                MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 5);
+                streamHandler->lockStream();
+                matlab::data::ArrayFactory factory;
+                matlab::data::TypedArray<int64_t> epochs = factory.createArray<int64_t>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> yaw = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> pitch = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> roll = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> heading = factory.createArray<double>({1, streamHandler->size()});
+
+                unsigned int i = 0;
+                while (!streamHandler->isEmpty()) {
+                    auto entry = streamHandler->peek();
+                    streamHandler->pop();
+                    auto c = (MblMwEulerAngles *) entry->getData();
+                    epochs[i] = entry->getEpoch();
+
+                    yaw[i] = c->yaw;
+                    roll[i] = c->roll;
+                    pitch[i] = c->pitch;
+                    heading[i] = c->heading;
+
+                    free(entry);
+                    ++i;
+                }
+                streamHandler->unLockStream();
+                outputs[0] = epochs;
+                outputs[1] = yaw;
+                outputs[2] = pitch;
+                outputs[3] = roll;
+                outputs[4] = heading;
+            }
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_QUATERNION: {
+                MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 5);
+                streamHandler->lockStream();
+                matlab::data::ArrayFactory factory;
+                matlab::data::TypedArray<int64_t> epochs = factory.createArray<int64_t>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> x = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> y = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> z = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> w = factory.createArray<double>({1, streamHandler->size()});
+
+                unsigned int i = 0;
+                while (!streamHandler->isEmpty()) {
+                    auto entry = streamHandler->peek();
+                    streamHandler->pop();
+                    auto c = (MblMwQuaternion *) entry->getData();
+                    epochs[i] = entry->getEpoch();
+
+                    x[i] = c->x;
+                    y[i] = c->y;
+                    z[i] = c->z;
+                    w[i] = c->w;
+
+                    free(entry);
+                    ++i;
+                }
+                streamHandler->unLockStream();
+                outputs[0] = epochs;
+                outputs[1] = x;
+                outputs[2] = y;
+                outputs[3] = z;
+                outputs[4] = w;
+            }
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_CORRECTED_CARTESIAN_FLOAT:
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_INT32:
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_BYTE_ARRAY:
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_BATTERY_STATE:
+                break;
+            case MblMwDataTypeId::MBL_MW_DT_ID_TCS34725_ADC:
+                break;
+            default:
+                break;
+            case MBL_MW_DT_ID_OVERFLOW_STATE:
+                break;
+            case MBL_MW_DT_ID_SENSOR_ORIENTATION:
+                break;
+            case MBL_MW_DT_ID_STRING:
+                break;
+            case MBL_MW_DT_ID_LOGGING_TIME:
+                break;
+            case MBL_MW_DT_ID_BTLE_ADDRESS:
+                break;
+            case MBL_MW_DT_ID_BOSCH_ANY_MOTION:
+                break;
+            case MBL_MW_DT_ID_CALIBRATION_STATE:
+                break;
+        }
+    }
+
 }
 
 void CaptureHandler::mexSubscribeGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){

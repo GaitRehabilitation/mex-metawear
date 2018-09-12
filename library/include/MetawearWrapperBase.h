@@ -22,7 +22,6 @@
 #include <metawear/core/cpp/metawearboard_def.h>
 #include <metawear/sensor/gyro_bmi160.h>
 #include "StreamTypes.h"
-#include "MetawearDatastream.h"
 #include "StreamHandler.h"
 #include <map>
 class MetawearWrapperBase{
@@ -36,24 +35,14 @@ protected:
     bool m_isMetawerReady;
     MblMwMetaWearBoard *m_metaWearBoard;
 
-    MetawearDataStream<CartesianFloatContainer> m_accelerationStream;
-    MetawearDataStream<CartesianFloatContainer> m_gyroStream;
-//    MetawearDataStream<CartesianFloatContainer> m_barometerStream;
-//    MetawearDataStream<CartesianFloatContainer> m_ambientLightStream;
-//    MetawearDataStream<CartesianFloatContainer> m_colorStream;
-//    MetawearDataStream<CartesianFloatContainer> m_temperatureStream;
-    MetawearDataStream<CartesianFloatContainer> m_magnetometer;
-//    MetawearDataStream<CartesianFloatContainer> m_sensorFusion;
-
     std::map<std::string ,StreamHandler*> m_handlers;
 
 
 public:
-
-    void registerHandler(const std::string&,StreamHandler*);
-    void removeHandler(const std::string&);
+    bool hasHandler(const std::string&);
+    bool registerHandler(const std::string&,StreamHandler*);
+    bool removeHandler(const std::string&);
     StreamHandler* getHandler(const std::string&);
-
 
     MetawearWrapperBase(const std::string& mac);
     ~MetawearWrapperBase();
@@ -65,9 +54,6 @@ public:
 
     virtual void connect() = 0;
     virtual void disconnect() = 0;
-
-     MetawearDataStream<CartesianFloatContainer>* getAccelerationStream();
-    MetawearDataStream<CartesianFloatContainer>* getGyroStream();
 
     MblMwMetaWearBoard * getBoard();
 

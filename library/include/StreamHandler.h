@@ -20,19 +20,20 @@ enum StreamType{
 
 class StreamEntry{
 private:
-    MblMwDataTypeId m_type;
     int64_t m_epoch;
     void* m_data;
     uint8_t m_length;
+    MblMwDataTypeId m_type;
 public:
-    int64_t getEpoch();
-    void* getData();
-    MblMwDataTypeId getType();
+    const MblMwDataTypeId  getType() const;
+    const int64_t getEpoch()const;
+    const void* getData() const;
+    const uint8_t getLength() const;
 
     StreamEntry(const MblMwData *data);
     ~StreamEntry();
 };
-typedef void (HandleData)(void* context,const StreamEntry& entry);
+typedef void (HandleData)(void* context,StreamEntry& entry);
 
 class StreamHandler{
 private:
@@ -43,12 +44,12 @@ private:
 public:
     StreamHandler(MblMwDataSignal* signal,StreamType type);
     ~StreamHandler();
-
-    void empty(void* context,HandleData*);
-    bool pop(void* context, HandleData*);
+    void lockStream();
+    void unLockStream();
+    StreamEntry* peek();
+    unsigned int size();
+    void pop();
     bool isEmpty();
-
-
 };
 
 #endif //MEX_METAWEAR_STREAMHANDLER_H

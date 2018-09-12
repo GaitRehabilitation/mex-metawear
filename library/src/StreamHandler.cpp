@@ -18,10 +18,10 @@ StreamHandler::StreamHandler(MblMwDataSignal* signal,StreamType type){
                 if (logger != nullptr) {
                     handler->m_logger_signal = logger;
                     mbl_mw_logger_subscribe(logger, handler, [](void *context, const MblMwData *data) -> void {
-                        auto handler = static_cast<StreamHandler *>(context);
-                        handler->m_data_lock.lock();
-                        handler->m_data->push(new StreamEntry(data));
-                        handler->m_data_lock.unlock();
+                        StreamHandler*  handler = static_cast<StreamHandler *>(context);
+                         handler->m_data_lock.lock();
+                         handler->m_data->push(new StreamEntry(data));
+                         handler->m_data_lock.unlock();
                     });
 
                     printf("logger ready\n");
@@ -60,10 +60,10 @@ StreamHandler::~StreamHandler() {
 }
 
 StreamEntry::StreamEntry(const MblMwData *data) :
-    m_type(data->type_id),
     m_epoch(data->epoch),
-    m_length(data->length) {
-    switch (m_type) {
+    m_length(data->length),
+    m_type(data->type_id){
+    switch (data->type_id) {
         case MblMwDataTypeId::MBL_MW_DT_ID_UINT32: {
             auto c = static_cast<uint32_t *>(data->value);
             auto output = new float[m_length];
@@ -134,48 +134,47 @@ StreamEntry::StreamEntry(const MblMwData *data) :
 }
 
 
-int64_t StreamEntry::getEpoch() {
+const int64_t StreamEntry::getEpoch() const {
     return m_epoch;
 }
 
-void* StreamEntry::getData() {
+const void* StreamEntry::getData() const {
     return m_data;
 }
 
-MblMwDataTypeId StreamEntry::getType() {
-    return m_type;
-}
-
-void StreamHandler::empty(void* context,HandleData* method) {
-    m_data_lock.lock();
-    std::queue<StreamEntry *> *temp = m_data;
-    m_data = new std::queue<StreamEntry *>();
-    m_data_lock.unlock();
-    while (!temp->empty()) {
-        StreamEntry *entry = temp->front();
-        temp->pop();
-        method(context, *entry);
-        free(entry);
-    }
-    free(temp);
-}
-
-bool StreamHandler::pop(void *context, HandleData * method) {
-    if (!m_data->empty()) {
-        m_data_lock.lock();
-        StreamEntry *entry = m_data->front();
-        m_data_lock.unlock();
-        method(context, *entry);
-        free(entry);
-        return true;
-    }
-    return false;
+const uint8_t StreamEntry::getLength() const {
+    return m_length;
 }
 
 bool StreamHandler::isEmpty() {
     return m_data->empty();
 }
 
+void StreamHandler::unLockStream() {
+    m_data_lock.unlock();
+}
+
+void StreamHandler::lockStream() {
+    m_data_lock.lock();
+}
+
+StreamEntry *StreamHandler::peek(){
+    return m_data->front();
+}
+
+void StreamHandler::pop() {
+    m_data->pop();
+}
+unsigned int StreamHandler::size(){
+    return m_data->size();
+}
+
+
+
 StreamEntry::~StreamEntry() {
     free(m_data);
+}
+
+const MblMwDataTypeId StreamEntry::getType() const {
+    return m_type;
 }

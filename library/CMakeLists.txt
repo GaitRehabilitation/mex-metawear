@@ -11,7 +11,6 @@ SET(SOURCE
 SET(INCLUDE
         include/FunctionWrapper.h
         include/MetawearConfig.h
-        include/MetawearDatastream.h
         include/MetawearWrapperBase.h
         include/MetawearMexFunction.h
         include/MexUtility.h
