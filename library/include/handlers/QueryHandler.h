@@ -19,8 +19,6 @@ public:
     QueryHandler(ConnectionHandler* connectionHandler,FunctionWrapper* wrapper);
     ~QueryHandler();
 
-    static void mexQueryGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
-    static void mexQueryAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
     static void mexQueryBoardInfo(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
 
 };

@@ -27,7 +27,9 @@
 #include "MetawearWrapperBase.h"
 
 MetawearWrapperBase::MetawearWrapperBase(const std::string& mac) :
-    m_mac(mac), m_accelerationStream(1000),m_gyroStream(1000),m_magnetometer(1000),m_ready(false){
+    m_mac(mac),
+    m_ready(false),
+    m_handlers(){
 }
 
 MetawearWrapperBase::~MetawearWrapperBase() {
@@ -38,6 +40,34 @@ bool MetawearWrapperBase::isReady() {
     return m_ready;
 }
 
+bool MetawearWrapperBase::hasHandler(const std::string& key){
+    return m_handlers.count(key);
+}
+
+
+bool MetawearWrapperBase::registerHandler(const std::string& key,StreamHandler* handler){
+    if(hasHandler(key))
+        return false;
+    m_handlers.emplace(key,handler);
+    return true;
+}
+
+bool MetawearWrapperBase::removeHandler(const std::string& key){
+    if(hasHandler(key)){
+        m_handlers.erase(key);
+        return true;
+    }
+    return false;
+}
+
+StreamHandler* MetawearWrapperBase::getHandler(const std::string& key){
+    auto  it = m_handlers.find(key);
+    if (it != m_handlers.end())
+        return it->second;
+    return nullptr;
+}
+
+
 void MetawearWrapperBase::configureMetawear() {
 
     mbl_mw_metawearboard_initialize(m_metaWearBoard, this,
@@ -47,47 +77,6 @@ void MetawearWrapperBase::configureMetawear() {
                                         if (!status) {
                                             std::cout << "Board Initialized";
                                             wrapper->m_ready = true;
-
-                                            // subscribe to acceleration handler
-                                            auto acc_signal = mbl_mw_acc_get_packed_acceleration_data_signal(wrapper->m_metaWearBoard);
-                                            mbl_mw_datasignal_subscribe(acc_signal, wrapper, [](void *context,
-                                                                                                const MblMwData *data) -> void {
-                                                auto w = static_cast<MetawearWrapperBase *>(context);
-                                                auto acceleration = static_cast<MblMwCartesianFloat *>(data->value);
-                                                auto c = CartesianFloatContainer();
-                                                c.x = acceleration->x;
-                                                c.y = acceleration->y;
-                                                c.z = acceleration->z;
-                                                c.epoch = data->epoch;
-                                                w->m_accelerationStream.push(c);
-                                            });
-
-                                            auto gyro_signal = mbl_mw_gyro_bmi160_get_packed_rotation_data_signal( wrapper->m_metaWearBoard);
-                                            mbl_mw_datasignal_subscribe(gyro_signal, wrapper, [](void *context,
-                                                                                                 const MblMwData *data) -> void {
-                                                auto w = static_cast<MetawearWrapperBase *>(context);
-                                                auto gyro = static_cast<MblMwCartesianFloat *>(data->value);
-                                                auto c = CartesianFloatContainer();
-                                                c.x = gyro->x;
-                                                c.y = gyro->y;
-                                                c.z = gyro->z;
-                                                c.epoch = data->epoch;
-                                                w->m_gyroStream.push(c);
-                                            });
-
-                                            auto bfield_signal = mbl_mw_mag_bmm150_get_b_field_data_signal(wrapper->m_metaWearBoard);
-                                            mbl_mw_datasignal_subscribe(bfield_signal,wrapper,[](void *context,
-                                                                                                 const MblMwData *data) -> void {
-                                                auto w = static_cast<MetawearWrapperBase *>(context);
-                                                auto gyro = static_cast<MblMwCartesianFloat *>(data->value);
-                                                auto c = CartesianFloatContainer();
-                                                c.x = gyro->x;
-                                                c.y = gyro->y;
-                                                c.z = gyro->z;
-                                                c.epoch = data->epoch;
-                                                w->m_magnetometer.push(c);
-                                            });
-
                                         } else {
                                             switch (status) {
                                                 case MBL_MW_STATUS_OK :
@@ -131,13 +120,6 @@ void MetawearWrapperBase::configureMetawear() {
 
 }
 
-MetawearDataStream<CartesianFloatContainer >* MetawearWrapperBase::getAccelerationStream(){
-    return &m_accelerationStream;
-}
-
-MetawearDataStream<CartesianFloatContainer>* MetawearWrapperBase::getGyroStream(){
-    return &m_gyroStream;
-}
 
 const std::string& MetawearWrapperBase::getMacAddress() const{
     return m_mac;
