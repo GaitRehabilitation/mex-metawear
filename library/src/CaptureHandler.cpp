@@ -30,11 +30,14 @@ CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWra
             {"enable_gyro", mexEnableGyro},
             {"enable_accelerometer", mexEnableAccelerometer},
             {"enable_magnetometer", mexEnableMagnetometer},
+            {"set_sensor_fusion_flag",mexSetSensorFusionFlag},
+            {"enable_sensorfusion", mexEnableSensorFusion},
 
             //disable
             {"disable_gyro",mexDisableGyro},
             {"disable_accelerometer",mexDisableAccelerometer},
             {"disable_magnetometer", mexDisableMagnetometer},
+            {"disable_sensorfusion",mexDisableSensorFusion},
 
             // metawear('subscribe_acc',boolean: log or not to log, {filters})
             {"subscribe_acc", mexSubscribeAcc},
@@ -149,7 +152,7 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
                 while (!streamHandler->isEmpty()) {
                     auto entry = streamHandler->peek();
                     streamHandler->pop();
-                    auto c = (MblMwCartesianFloat *) entry->getData();
+                    auto c = static_cast<MblMwCartesianFloat *>(entry->getData());
                     epochs[i] = entry->getEpoch();
 
                     x[i] = c->x;
@@ -179,7 +182,7 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
                 while (!streamHandler->isEmpty()) {
                     auto entry = streamHandler->peek();
                     streamHandler->pop();
-                    auto c = (MblMwEulerAngles *) entry->getData();
+                    auto c = static_cast<MblMwEulerAngles *>(entry->getData());
                     epochs[i] = entry->getEpoch();
 
                     yaw[i] = c->yaw;
@@ -212,7 +215,7 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
                 while (!streamHandler->isEmpty()) {
                     auto entry = streamHandler->peek();
                     streamHandler->pop();
-                    auto c = (MblMwQuaternion *) entry->getData();
+                    auto c = static_cast<MblMwQuaternion *>(entry->getData());
                     epochs[i] = entry->getEpoch();
 
                     x[i] = c->x;
@@ -304,6 +307,41 @@ void CaptureHandler::mexSubscribeAcc(std::shared_ptr<matlab::engine::MATLABEngin
 
 }
 
+void CaptureHandler::mexSetSensorFusionFlag(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
+    CaptureHandler *handler = static_cast<CaptureHandler *>(context);
+
+    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::INPUT, inputs.size(), 3);
+    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 1, inputs[1].getType(),
+                          matlab::data::ArrayType::CHAR);
+    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 2, inputs[2].getType(),
+                          matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address = inputs[1];
+    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
+    if (wrapper == nullptr) MexUtility::error(engine, "Unknown Sensor");
+    MblMwMetaWearBoard *board = wrapper->getBoard();
+
+    matlab::data::CharArray type = inputs[2];
+    if (type.toAscii() == "CORRECTED_ACC") {
+        mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_ACC);
+    } else if (type.toAscii() == "CORRECTED_GYRO") {
+        mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_GYRO);
+    } else if (type.toAscii() == "CORRECTED_MAG") {
+        mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_MAG);
+    } else if (type.toAscii() == "QUATERNION") {
+        mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_QUATERNION);
+    } else if (type.toAscii() == "EULER_ANGLE") {
+        mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_EULER_ANGLE);
+    } else if (type.toAscii() == "GRAVITY_VECTOR") {
+        mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_GRAVITY_VECTOR);
+    } else if (type.toAscii() == "LINEAR_ACC") {
+        mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_LINEAR_ACC);
+    } else {
+        MexUtility::error(engine,
+                          "Fusion Supports Parameter: CORRECTED_ACC, CORRECTED_GYRO, QUATERNION, EULER_ANGLE, GRAVITY_VECTOR, LINEAR_ACC");
+    }
+}
+
 void CaptureHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
     CaptureHandler *handler = static_cast<CaptureHandler *>(context);
 
@@ -322,8 +360,7 @@ void CaptureHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEn
     matlab::data::CharArray type = inputs[2];
     if (type.toAscii() == "CORRECTED_ACC") {
 
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board,
-                                                                      MblMwSensorFusionData::MBL_MW_SENSOR_FUSION_DATA_CORRECTED_ACC);
+        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_ACC);
         wrapper->registerHandler("fusion_corrected_acc", new StreamHandler(quaternion_signal, StreamType::STREAMING));
 
         matlab::data::ArrayFactory factory;
@@ -331,8 +368,7 @@ void CaptureHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEn
         outputs[0] = key;
     } else if (type.toAscii() == "CORRECTED_GYRO") {
 
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board,
-                                                                      MblMwSensorFusionData::MBL_MW_SENSOR_FUSION_DATA_CORRECTED_GYRO);
+        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_GYRO);
         wrapper->registerHandler("fusion_corrected_gyro", new StreamHandler(quaternion_signal, StreamType::STREAMING));
 
         matlab::data::ArrayFactory factory;
@@ -340,40 +376,35 @@ void CaptureHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEn
         outputs[0] = key;
     } else if (type.toAscii() == "CORRECTED_MAG") {
 
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board,
-                                                                      MblMwSensorFusionData::MBL_MW_SENSOR_FUSION_DATA_CORRECTED_MAG);
+        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_MAG);
         wrapper->registerHandler("fusion_corrected_mag", new StreamHandler(quaternion_signal, StreamType::STREAMING));
 
         matlab::data::ArrayFactory factory;
         matlab::data::CharArray key = factory.createCharArray("fusion_corrected_mag");
         outputs[0] = key;
     } else if (type.toAscii() == "QUATERNION") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board,
-                                                                      MblMwSensorFusionData::MBL_MW_SENSOR_FUSION_DATA_QUATERNION);
+        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_QUATERNION);
         wrapper->registerHandler("fusion_quaternion", new StreamHandler(quaternion_signal, StreamType::STREAMING));
 
         matlab::data::ArrayFactory factory;
         matlab::data::CharArray key = factory.createCharArray("fusion_quaternion");
         outputs[0] = key;
     } else if (type.toAscii() == "EULER_ANGLE") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board,
-                                                                      MblMwSensorFusionData::MBL_MW_SENSOR_FUSION_DATA_EULER_ANGLE);
+        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_EULER_ANGLE);
         wrapper->registerHandler("fusion_euler", new StreamHandler(quaternion_signal, StreamType::STREAMING));
 
         matlab::data::ArrayFactory factory;
         matlab::data::CharArray key = factory.createCharArray("fusion_euler");
         outputs[0] = key;
     } else if (type.toAscii() == "GRAVITY_VECTOR") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board,
-                                                                      MblMwSensorFusionData::MBL_MW_SENSOR_FUSION_DATA_GRAVITY_VECTOR);
+        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_GRAVITY_VECTOR);
         wrapper->registerHandler("fusion_gravity_vector", new StreamHandler(quaternion_signal, StreamType::STREAMING));
 
         matlab::data::ArrayFactory factory;
         matlab::data::CharArray key = factory.createCharArray("fusion_gravity_vector");
         outputs[0] = key;
     } else if (type.toAscii() == "LINEAR_ACC") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board,
-                                                                      MblMwSensorFusionData::MBL_MW_SENSOR_FUSION_DATA_LINEAR_ACC);
+        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_LINEAR_ACC);
         wrapper->registerHandler("fusion_linear_acc", new StreamHandler(quaternion_signal, StreamType::STREAMING));
 
         matlab::data::ArrayFactory factory;
@@ -383,6 +414,35 @@ void CaptureHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEn
         MexUtility::error(engine,
                           "Fusion Supports Parameter: CORRECTED_ACC, CORRECTED_GYRO, QUATERNION, EULER_ANGLE, GRAVITY_VECTOR, LINEAR_ACC");
     }
+}
+
+void CaptureHandler::mexEnableSensorFusion(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    mbl_mw_sensor_fusion_start(board);
+}
+
+void CaptureHandler::mexDisableSensorFusion(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    mbl_mw_sensor_fusion_clear_enabled_mask(board);
+    mbl_mw_sensor_fusion_stop(board);
+
 }
 
 void CaptureHandler::mexEnableMagnetometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){

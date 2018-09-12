@@ -25,10 +25,10 @@ private:
     uint8_t m_length;
     MblMwDataTypeId m_type;
 public:
-    const MblMwDataTypeId  getType() const;
-    const int64_t getEpoch()const;
-    const void* getData() const;
-    const uint8_t getLength() const;
+    MblMwDataTypeId  getType();
+    int64_t getEpoch();
+    void* getData() ;
+    uint8_t getLength() ;
 
     StreamEntry(const MblMwData *data);
     ~StreamEntry();

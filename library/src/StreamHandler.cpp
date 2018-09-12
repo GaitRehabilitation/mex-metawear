@@ -134,15 +134,15 @@ StreamEntry::StreamEntry(const MblMwData *data) :
 }
 
 
-const int64_t StreamEntry::getEpoch() const {
+int64_t StreamEntry::getEpoch(){
     return m_epoch;
 }
 
-const void* StreamEntry::getData() const {
+void* StreamEntry::getData(){
     return m_data;
 }
 
-const uint8_t StreamEntry::getLength() const {
+uint8_t StreamEntry::getLength() {
     return m_length;
 }
 
@@ -175,6 +175,6 @@ StreamEntry::~StreamEntry() {
     free(m_data);
 }
 
-const MblMwDataTypeId StreamEntry::getType() const {
+MblMwDataTypeId StreamEntry::getType() {
     return m_type;
 }
