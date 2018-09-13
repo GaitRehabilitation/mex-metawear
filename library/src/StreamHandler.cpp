@@ -100,6 +100,7 @@ StreamEntry::StreamEntry(const MblMwData *data) :
             m_data = output;
 
         }
+            break;
         case MblMwDataTypeId::MBL_MW_DT_ID_QUATERNION:{
             auto c = static_cast<MblMwQuaternion*>(data->value);
             auto output = new MblMwQuaternion();
@@ -110,6 +111,7 @@ StreamEntry::StreamEntry(const MblMwData *data) :
             m_data = output;
 
         }
+            break;
         case MblMwDataTypeId::MBL_MW_DT_ID_CORRECTED_CARTESIAN_FLOAT:{
             auto c = static_cast<MblMwCorrectedCartesianFloat*>(data->value);
             auto output = new MblMwCorrectedCartesianFloat();
@@ -120,6 +122,16 @@ StreamEntry::StreamEntry(const MblMwData *data) :
             m_data = output;
 
         }
+            break;
+        case MblMwDataTypeId::MBL_MW_DT_ID_CALIBRATION_STATE:{
+            auto c = static_cast<MblMwCalibrationState*>(data->value);
+            auto output = new MblMwCalibrationState();
+            output->accelrometer = c->accelrometer;
+            output->gyroscope = c->gyroscope;
+            output->magnetometer = c->magnetometer;
+            m_data = output;
+        }
+            break;
         case MblMwDataTypeId::MBL_MW_DT_ID_INT32:
             break;
         case MblMwDataTypeId::MBL_MW_DT_ID_BYTE_ARRAY:
@@ -167,6 +179,11 @@ void StreamHandler::pop() {
 }
 unsigned int StreamHandler::size(){
     return m_data->size();
+}
+
+
+MblMwDataSignal* StreamHandler::getSignal(){
+    return m_signal;
 }
 
 

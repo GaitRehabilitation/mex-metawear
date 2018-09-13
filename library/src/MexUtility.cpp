@@ -17,6 +17,8 @@
 #include <MexUtility.h>
 #include "MatlabDataArray.hpp"
 
+
+
 void MexUtility::error(std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr,const std::string error) {
     matlab::data::ArrayFactory factory;
     matlabPtr->feval(matlab::engine::convertUTF8StringToUTF16String("error"), 0,
@@ -118,9 +120,9 @@ void MexUtility::checkNumberOfParameters(std::shared_ptr<matlab::engine::MATLABE
         return;
     switch (parameterType){
         case INPUT:
-            error(matlabPtr,"Expects " + std::to_string(target - 1) + "inputs but found " + std::to_string(current - 1));
+            error(matlabPtr,"Expects " + std::to_string(target - 1) + " inputs but found " + std::to_string(current - 1));
         case OUTPUT:
-            error(matlabPtr,"Expects " + std::to_string(target - 1) + "outputs but found " + std::to_string(current - 1));
+            error(matlabPtr,"Expects " + std::to_string(target - 1) + " outputs but found " + std::to_string(current - 1));
     }
 }
 

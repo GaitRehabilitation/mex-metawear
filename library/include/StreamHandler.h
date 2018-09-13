@@ -50,6 +50,7 @@ public:
     unsigned int size();
     void pop();
     bool isEmpty();
+    MblMwDataSignal* getSignal();
 };
 
 #endif //MEX_METAWEAR_STREAMHANDLER_H

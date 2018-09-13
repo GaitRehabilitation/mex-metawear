@@ -20,8 +20,13 @@
 #include <metawear/sensor/magnetometer_bmm150.h>
 #include <metawear/sensor/sensor_fusion.h>
 #include <metawear/core/logging.h>
+#include <handlers/CaptureHandler.h>
+
 #include "handlers/CaptureHandler.h"
 #include "handlers/ConnectionHandler.h"
+#include <iostream>       // std::cout, std::endl
+#include <thread>         // std::this_thread::sleep_for
+#include <chrono>         // std::chrono::seconds
 
 CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWrapper *wrapper):
     m_connectionHandler(connectionHandler){
@@ -43,6 +48,7 @@ CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWra
             {"subscribe_acc", mexSubscribeAcc},
             {"subscribe_gyro", mexSubscribeGyro},
             {"subscribe_fusion", mexSubscribeFusion},
+            {"fusion_calibrate",mexFusionCalibrate},
 
             {"query", mexQuery},
             {"unsubscribe",mexUnSubscribe},
@@ -234,6 +240,35 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
                 outputs[4] = w;
             }
                 break;
+            case MBL_MW_DT_ID_CALIBRATION_STATE:{
+                MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 4);
+                streamHandler->lockStream();
+                matlab::data::ArrayFactory factory;
+                matlab::data::TypedArray<int64_t> epochs = factory.createArray<int64_t>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> magnetometer = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> accelerometer = factory.createArray<double>({1, streamHandler->size()});
+                matlab::data::TypedArray<double> gyroscope = factory.createArray<double>({1, streamHandler->size()});
+
+                unsigned int i = 0;
+                while (!streamHandler->isEmpty()) {
+                    auto entry = streamHandler->peek();
+                    streamHandler->pop();
+                    auto c = static_cast<MblMwCalibrationState *>(entry->getData());
+                    epochs[i] = entry->getEpoch();
+
+                    magnetometer[i] = c->magnetometer;
+                    accelerometer[i] = c->accelrometer;
+                    gyroscope[i] = c->gyroscope;
+                    free(entry);
+                    ++i;
+                }
+                streamHandler->unLockStream();
+                outputs[0] = epochs;
+                outputs[1] = accelerometer;
+                outputs[2] = gyroscope;
+                outputs[3] = magnetometer;
+            }
+                break;
             case MblMwDataTypeId::MBL_MW_DT_ID_CORRECTED_CARTESIAN_FLOAT:
                 break;
             case MblMwDataTypeId::MBL_MW_DT_ID_INT32:
@@ -257,8 +292,6 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
             case MBL_MW_DT_ID_BTLE_ADDRESS:
                 break;
             case MBL_MW_DT_ID_BOSCH_ANY_MOTION:
-                break;
-            case MBL_MW_DT_ID_CALIBRATION_STATE:
                 break;
         }
     }
@@ -341,6 +374,66 @@ void CaptureHandler::mexSetSensorFusionFlag(std::shared_ptr<matlab::engine::MATL
                           "Fusion Supports Parameter: CORRECTED_ACC, CORRECTED_GYRO, QUATERNION, EULER_ANGLE, GRAVITY_VECTOR, LINEAR_ACC");
     }
 }
+void CaptureHandler::mexFusionCalibrate(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    auto signal = mbl_mw_sensor_fusion_calibration_state_data_signal(board);
+    struct Payload{
+        std::queue<MblMwCalibrationState*> queue;
+        std::mutex lock;
+    };
+    auto c = new Payload();
+    mbl_mw_datasignal_subscribe(signal, c, [](void* context, const MblMwData* data) {
+        Payload* results = ( Payload*)context;
+        MblMwCalibrationState* casted = (MblMwCalibrationState*) data->value;
+        MblMwCalibrationState* temp = new MblMwCalibrationState();
+        memcpy(temp,casted, sizeof(MblMwCalibrationState));
+        results->lock.lock();
+        results->queue.push(temp);
+        results->lock.unlock();
+    });
+
+    mbl_mw_sensor_fusion_set_mode(board,MBL_MW_SENSOR_FUSION_MODE_NDOF);
+    mbl_mw_sensor_fusion_write_config(board);
+
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_ACC);
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_GYRO);
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_MAG);
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_EULER_ANGLE);
+    mbl_mw_sensor_fusion_start(board);
+
+    bool isCalibrated = false;
+    do {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        c->lock.lock();
+        while (!c->queue.empty()) {
+            MblMwCalibrationState *entry = c->queue.front();
+            MexUtility::printf(engine, "calibration state: {accelerometer: " + std::to_string(entry->accelrometer) +
+                                       +", gyroscope: " + std::to_string(entry->gyroscope) +
+                                       +", magnetometer: " + std::to_string(entry->magnetometer) +
+                                       +"} \n");
+            if (!isCalibrated) {
+                isCalibrated = (entry->accelrometer == 3 && entry->gyroscope == 3 && entry->magnetometer == 3);
+            }
+            free(entry);
+            c->queue.pop();
+        }
+        c->lock.unlock();
+        mbl_mw_datasignal_read(signal);
+    }
+    while(!isCalibrated);
+    mbl_mw_datasignal_unsubscribe(signal);
+    delete(c);
+}
+
 
 void CaptureHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
     CaptureHandler *handler = static_cast<CaptureHandler *>(context);
@@ -538,4 +631,3 @@ void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MAT
 CaptureHandler::~CaptureHandler() {
 
 }
-
