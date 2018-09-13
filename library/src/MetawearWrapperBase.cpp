@@ -15,7 +15,6 @@
 */
 
 
-#include <MetawearWrapperBase.h>
 #include <metawear/core/settings.h>
 #include <metawear/sensor/accelerometer.h>
 #include <metawear/core/datasignal.h>
@@ -23,22 +22,22 @@
 #include <metawear/core/status.h>
 #include <metawear/sensor/gyro_bmi160.h>
 #include <metawear/sensor/magnetometer_bmm150.h>
+#include <MetawearWrapperBase.h>
+
 
 #include "MetawearWrapperBase.h"
 
-MetawearWrapperBase::MetawearWrapperBase(const std::string& mac) :
+MetawearWrapperBase::MetawearWrapperBase(const std::string& mac, std::shared_ptr<matlab::engine::MATLABEngine> engine) :
     m_mac(mac),
-    m_ready(false),
-    m_handlers(){
+    m_isConnected(false),
+    m_handlers() ,
+    m_mexPrintStream(engine) {
 }
 
 MetawearWrapperBase::~MetawearWrapperBase() {
 
 }
 
-bool MetawearWrapperBase::isReady() {
-    return m_ready;
-}
 
 bool MetawearWrapperBase::hasHandler(const std::string& key){
     return m_handlers.count(key);
@@ -70,52 +69,48 @@ StreamHandler* MetawearWrapperBase::getHandler(const std::string& key){
 
 void MetawearWrapperBase::configureMetawear() {
 
-    mbl_mw_metawearboard_initialize(m_metaWearBoard, this,
-                                    [](void *context, MblMwMetaWearBoard *board, int32_t status) -> void {
-                                        auto *wrapper = static_cast<MetawearWrapperBase *>(context);
+    mbl_mw_metawearboard_initialize(m_metaWearBoard, this, [](void *context, MblMwMetaWearBoard *board, int32_t status) -> void {
 
-                                        if (!status) {
-                                            std::cout << "Board Initialized";
-                                            wrapper->m_ready = true;
-                                        } else {
-                                            switch (status) {
-                                                case MBL_MW_STATUS_OK :
-                                                    std::cout << "Error Initializing board: " << "MBL_MW_STATUS_OK \n";
-                                                    break;
-                                                case MBL_MW_STATUS_WARNING_UNEXPECTED_SENSOR_DATA :
-                                                    std::cout << "Error Initializing board: "
-                                                              << "MBL_MW_STATUS_WARNING_UNEXPECTED_SENSOR_DATA \n";
-                                                    break;
-                                                case MBL_MW_STATUS_WARNING_INVALID_PROCESSOR_TYPE :
-                                                    std::cout << "Error Initializing board: "
-                                                              << "MBL_MW_STATUS_WARNING_INVALID_PROCESSOR_TYPE \n";
-                                                    break;
-                                                case MBL_MW_STATUS_ERROR_UNSUPPORTED_PROCESSOR :
-                                                    std::cout << "Error Initializing board: "
-                                                              << "MBL_MW_STATUS_ERROR_UNSUPPORTED_PROCESSOR \n";
-                                                    break;
-                                                case MBL_MW_STATUS_WARNING_INVALID_RESPONSE :
-                                                    std::cout << "Error Initializing board: "
-                                                              << "MBL_MW_STATUS_WARNING_INVALID_RESPONSE \n";
-                                                    break;
-                                                case MBL_MW_STATUS_ERROR_TIMEOUT :
-                                                    std::cout << "Error Initializing board: "
-                                                              << "MBL_MW_STATUS_ERROR_TIMEOUT";
-                                                    break;
-                                                case MBL_MW_STATUS_ERROR_SERIALIZATION_FORMAT :
-                                                    std::cout << "Error Initializing board: "
-                                                              << "MBL_MW_STATUS_ERROR_SERIALIZATION_FORMAT \n";
-                                                    break;
-                                                case MBL_MW_STATUS_ERROR_ENABLE_NOTIFY :
-                                                    std::cout << "Error Initializing board: "
-                                                              << "MBL_MW_STATUS_ERROR_ENABLE_NOTIFY \n";
-                                                    break;
-                                                default:
-                                                    std::cout << "Error Initializing board: " << "Unknown Error \n";
-                                                    break;
-                                            }
-                                        }
-                                    });
+        auto *wrapper = static_cast<MetawearWrapperBase*>(context);
+
+        if (!status) {
+            wrapper->m_mexPrintStream.printf("Board Initialized");
+            wrapper->m_isConnected = true;
+        } else {
+            switch (status) {
+                case MBL_MW_STATUS_OK :
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_OK");
+                    break;
+                case MBL_MW_STATUS_WARNING_UNEXPECTED_SENSOR_DATA :
+
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_WARNING_UNEXPECTED_SENSOR_DATA");
+                    break;
+                case MBL_MW_STATUS_WARNING_INVALID_PROCESSOR_TYPE :
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_WARNING_INVALID_PROCESSOR_TYPE");
+                    break;
+                case MBL_MW_STATUS_ERROR_UNSUPPORTED_PROCESSOR :
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_ERROR_UNSUPPORTED_PROCESSOR");
+                    break;
+                case MBL_MW_STATUS_WARNING_INVALID_RESPONSE :
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_WARNING_INVALID_RESPONSE");
+                    break;
+                case MBL_MW_STATUS_ERROR_TIMEOUT :
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_ERROR_TIMEOUT ");
+                    break;
+                case MBL_MW_STATUS_ERROR_SERIALIZATION_FORMAT :
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_ERROR_SERIALIZATION_FORMAT ");
+                    break;
+                case MBL_MW_STATUS_ERROR_ENABLE_NOTIFY :
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: MBL_MW_STATUS_ERROR_ENABLE_NOTIFY");
+                    break;
+                default:
+                    wrapper->m_mexPrintStream.printf("Error Initializing board: UNKNOWN_ERROR");
+                    break;
+            }
+        }
+        //release blocker
+        wrapper->m_mexPrintStream.release();
+    });
 
 
 }
@@ -128,4 +123,13 @@ const std::string& MetawearWrapperBase::getMacAddress() const{
 
 MblMwMetaWearBoard * MetawearWrapperBase::getBoard(){
     return m_metaWearBoard;
+}
+
+
+void MetawearWrapperBase::mexStreamBlock() {
+    m_mexPrintStream.block();
+}
+
+bool MetawearWrapperBase::isConnected() {
+    return m_isConnected;
 }

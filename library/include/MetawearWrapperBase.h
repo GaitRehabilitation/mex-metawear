@@ -17,46 +17,58 @@
 #ifndef MEX_METAWEAR_METAWEARWRAPPERBASE_H
 #define MEX_METAWEAR_METAWEARWRAPPERBASE_H
 
+// standard library
 #include <string>
+#include <map>
+
+// metawear
 #include <metawear/core/types.h>
 #include <metawear/core/cpp/metawearboard_def.h>
 #include <metawear/sensor/gyro_bmi160.h>
+
 #include "StreamTypes.h"
 #include "StreamHandler.h"
-#include <map>
-class MetawearWrapperBase{
+#include "MexPrintStream.h"
+
+class MetawearWrapperBase {
 protected:
     std::string m_firmwareVersion;
     std::string m_model;
 
-    volatile bool m_ready;
+    volatile bool m_isConnected;
 
     std::string m_mac;
-    bool m_isMetawerReady;
     MblMwMetaWearBoard *m_metaWearBoard;
+    MexPrintStream m_mexPrintStream;
 
-    std::map<std::string ,StreamHandler*> m_handlers;
-
+    std::map<std::string, StreamHandler *> m_handlers;
+protected:
+    void configureMetawear();
 
 public:
-    bool hasHandler(const std::string&);
-    bool registerHandler(const std::string&,StreamHandler*);
-    bool removeHandler(const std::string&);
-    StreamHandler* getHandler(const std::string&);
+    bool hasHandler(const std::string &);
 
-    MetawearWrapperBase(const std::string& mac);
+    bool registerHandler(const std::string &, StreamHandler *);
+
+    bool removeHandler(const std::string &);
+
+    StreamHandler *getHandler(const std::string &);
+
+    MetawearWrapperBase(const std::string &mac, std::shared_ptr<matlab::engine::MATLABEngine> engine);
+
     ~MetawearWrapperBase();
 
-    const std::string& getMacAddress() const;
-
-    void configureMetawear();
-    bool isReady();
+    const std::string &getMacAddress() const;
 
     virtual void connect() = 0;
+
     virtual void disconnect() = 0;
 
-    MblMwMetaWearBoard * getBoard();
+    void mexStreamBlock();
 
+    bool isConnected();
+
+    MblMwMetaWearBoard *getBoard();
 };
 
 #endif //MEX_METAWEAR_METAWEARWRAPPERBASE_H

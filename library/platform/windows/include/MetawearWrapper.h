@@ -37,22 +37,23 @@ using namespace Windows::Security::Cryptography;
 
 static   Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
 
-class MetawearWrapper: public MetawearWrapperBase{
+class MetawearWrapper: public MetawearWrapperBase {
 private:
     struct Hasher {
-        size_t operator() (Platform::Guid key) const {
+        size_t operator()(Platform::Guid key) const {
             return key.GetHashCode();
         }
     };
+
     struct EqualFn {
-        bool operator() (Platform::Guid t1, Platform::Guid t2) const {
+        bool operator()(Platform::Guid t1, Platform::Guid t2) const {
             return t1.Equals(t2);
         }
     };
 
-    std::unordered_map<Platform::Guid, GattDeviceService^, Hasher, EqualFn> m_services;
-    std::unordered_map<Platform::Guid, GattCharacteristic^, Hasher, EqualFn> m_characterstics;
-    BluetoothLEDevice^ m_device;
+    std::unordered_map<Platform::Guid, GattDeviceService ^ , Hasher, EqualFn> m_services;
+    std::unordered_map<Platform::Guid, GattCharacteristic ^ , Hasher, EqualFn> m_characterstics;
+    BluetoothLEDevice^m_device;
 
     static void read_gatt_char(void *context, const void *caller, const MblMwGattChar *characteristic,
                                MblMwFnIntVoidPtrArray handler);
@@ -64,17 +65,19 @@ private:
                                    MblMwFnIntVoidPtrArray handler, MblMwFnVoidVoidPtrInt ready);
 
     static void on_disconnect(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler);
-    GattCharacteristic^  findCharacterstic( uint64_t low, uint64_t high);
-    void cleanup();
+
+    GattCharacteristic^  findCharacterstic(uint64_t low, uint64_t high);
+
     void startDiscovery();
 
 public:
-    explicit MetawearWrapper(const std::string& mac);
+    explicit MetawearWrapper(const std::string &mac, std::shared_ptr<matlab::engine::MATLABEngine> engine);
+
     ~MetawearWrapper();
+
     void connect() override;
+
     void disconnect() override;
-
-
 };
 
 #endif //MEX_METAWEAR_METAWEARWRAPPER_H

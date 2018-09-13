@@ -19,11 +19,12 @@
 #include "handlers/ConnectionHandler.h"
 #include "FunctionWrapper.h"
 #include "MetawearWrapper.h"
+#include "MexPrintStream.h"
 
 ConnectionHandler::ConnectionHandler(FunctionWrapper* wrapper): m_devices() {
-    std::map<std::string, WrapperMethod *> functions =  {
-        {"connect", mexConnect},
-        {"disconnect", mexDisconnect}
+    std::map<std::string, WrapperMethod *> functions = {
+            {"connect",    mexConnect},
+            {"disconnect", mexDisconnect}
     };
     wrapper->registerMethod(this, functions);
 }
@@ -40,10 +41,8 @@ MetawearWrapper* ConnectionHandler::getDevice(const std::string& mac){
     return nullptr;
 }
 
-MetawearWrapper* ConnectionHandler::addDevice(const std::string& mac){
-    auto wrapper = new MetawearWrapper(mac);
-    m_devices.emplace(mac,wrapper);
-    return wrapper;
+void ConnectionHandler::addDevice(MetawearWrapper* wrapper){
+    m_devices.emplace(wrapper->getMacAddress(),wrapper);
 }
 
 MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
@@ -73,15 +72,40 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
          MexUtility::error(engine, "Invalid bluetooth address for second parameter");
          return;
      }
-     matlab::data::ArrayFactory factory;
-     matlab::data::CharArray addressCharArray = factory.createCharArray(address.toAscii());
-     outputs[0] = addressCharArray;
 
-     MexUtility::printf(engine, "Starting Connection \n");
-     MetawearWrapper *wrapper = handler->addDevice(address.toAscii());
-     wrapper->connect();
+     if(handler->getDevice(address.toAscii()) != nullptr){
+         matlab::data::ArrayFactory factory;
+         matlab::data::CharArray addressCharArray = factory.createCharArray(address.toAscii());
+         outputs[0] = addressCharArray;
+         MexUtility::printf(engine,"Already Connected \n");
+         return;
+     }
 
-     MexUtility::printf(engine, "Connection established \n");
+     MetawearWrapper *wrapper = new MetawearWrapper(address.toAscii(),engine);
+     unsigned int lattemptTime = 200;
+     while (true) {
+         wrapper->connect();
+         wrapper->mexStreamBlock();
+         if (wrapper->isConnected()) {
+             handler->addDevice(wrapper);
+             break;
+         }
+         if (lattemptTime > 5000) break;
+         MexUtility::printf(engine,"Attempting in " + std::to_string(lattemptTime) + " milliseconds \n");
+         std::this_thread::sleep_for(std::chrono::milliseconds(lattemptTime));
+         lattemptTime *= 2;
+     }
+     if (wrapper->isConnected()) {
+         MexUtility::printf(engine,"Connection Established \n");
+         matlab::data::ArrayFactory factory;
+         matlab::data::CharArray addressCharArray = factory.createCharArray(wrapper->getMacAddress());
+         outputs[0] = addressCharArray;
+     } else {
+         free(wrapper);
+         matlab::data::ArrayFactory factory;
+         matlab::data::CharArray addressCharArray = factory.createCharArray("FF:FF:FF:FF:FF:FF");
+         outputs[0] = addressCharArray;
+     }
  }
 
 void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
@@ -92,5 +116,7 @@ void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEng
     }
     matlab::data::CharArray address =  inputs[1];
     MetawearWrapper* wrapper =  handler->getDevice(address.toAscii());
+
     wrapper->disconnect();
+    wrapper->mexStreamBlock();
 }

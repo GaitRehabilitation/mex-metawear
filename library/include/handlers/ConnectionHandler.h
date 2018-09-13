@@ -21,7 +21,7 @@ public:
 
     MetawearWrapper *getDevice(const std::string &mac);
 
-    MetawearWrapper *addDevice(const std::string &mac);
+    void addDevice(MetawearWrapper* wrapper);
 
     MetawearWrapper *removeDevice(const std::string &mac);
 

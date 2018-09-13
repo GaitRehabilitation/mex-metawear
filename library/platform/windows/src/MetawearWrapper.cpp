@@ -1,3 +1,5 @@
+#include <utility>
+
 /**
 * Copyright 2018 GaitRehabilitation
 *
@@ -101,8 +103,8 @@ void MetawearWrapper::on_disconnect(void *context, const void *caller, MblMwFnVo
 }
 
 
-MetawearWrapper::MetawearWrapper(const std::string& mac):
-    MetawearWrapperBase::MetawearWrapperBase(mac),
+MetawearWrapper::MetawearWrapper(const std::string& mac,std::shared_ptr<matlab::engine::MATLABEngine> engine):
+    MetawearWrapperBase::MetawearWrapperBase(mac, std::move(engine)),
     m_services(),
     m_characterstics(){
 
@@ -119,29 +121,29 @@ MetawearWrapper::MetawearWrapper(const std::string& mac):
 
 }
 
-void MetawearWrapper::cleanup() {
-	for (auto it : m_characterstics)
-		delete it.second;
-	for (auto it : m_services)
-		delete it.second;
-
-	m_characterstics.clear();
-	m_services.clear();
-	if (m_device != nullptr) {
-		delete m_device;
-		m_device = nullptr;
-	}
-}
 
 MetawearWrapper::~MetawearWrapper(){
+    for (auto it : m_characterstics)
+        delete it.second;
+    for (auto it : m_services)
+        delete it.second;
 
+    m_characterstics.clear();
+    m_services.clear();
+    if (m_device != nullptr) {
+        delete m_device;
+        m_device = nullptr;
+    }
 }
 
 
 
 void MetawearWrapper::connect() {
+    m_mexPrintStream.clear();
+    m_mexPrintStream.setBlock();
+
 	std::string mac_copy(getMacAddress());
-    std::cout << "trying to connect with mac address: " << getMacAddress();
+    m_mexPrintStream.printf("trying to connect with mac address: " + getMacAddress());
 	mac_copy.erase(2, 1);
 	mac_copy.erase(4, 1);
 	mac_copy.erase(6, 1);
@@ -153,22 +155,23 @@ void MetawearWrapper::connect() {
 
     create_task(BluetoothLEDevice::FromBluetoothAddressAsync(mac_ulong)).then([=](BluetoothLEDevice^ leDevice) {
         if (leDevice == nullptr) {
-            std::cout << "Failed to discover device";
+            m_mexPrintStream.printf("Failed to Discover Device");
+            m_mexPrintStream.release();
         }
         else {
             leDevice->ConnectionStatusChanged += ref new TypedEventHandler<BluetoothLEDevice^, Platform::Object^>([=](BluetoothLEDevice^ sender, Platform::Object^ args) {
                 switch (sender->ConnectionStatus) {
                     case BluetoothConnectionStatus::Disconnected:
-                        std::cout << "Failed to connect to device";
-                        this->cleanup();
+                        m_mexPrintStream.printf("Failed to connect to device");
+                        m_mexPrintStream.release();
                         break;
                 }
             });
-            std::cout << "starting discovery";
+            m_mexPrintStream.printf("Starting Discovery");
             this->m_device = leDevice;
             this->startDiscovery();
         }
-    }).wait();
+    });
 }
 
 
@@ -200,41 +203,69 @@ GattCharacteristic^  MetawearWrapper::findCharacterstic(uint64_t low, uint64_t h
 }
 
 void MetawearWrapper::startDiscovery(){
-    create_task(this->m_device->GetGattServicesAsync(BluetoothCacheMode::Uncached)).then([=](GattDeviceServicesResult^ result) {
-        if (result->Status == GattCommunicationStatus::Success) {
-            std::vector<task<GattCharacteristicsResult^>> find_gattchar_tasks;
-            for (unsigned int x = 0; x < result->Services->Size; ++x) {
-                auto service = result->Services->GetAt(x);
-                m_services.emplace(service->Uuid, service);
-                find_gattchar_tasks.push_back(create_task(service->GetCharacteristicsAsync(BluetoothCacheMode::Uncached)));
-            }
-            return when_all(std::begin(find_gattchar_tasks), std::end(find_gattchar_tasks));
-        }
-        std::cout << "Failed fo discover Gatt service";
-
-    }).then([=](std::vector<GattCharacteristicsResult^> results) {
-        for (auto it : results) {
-            if (it->Status == GattCommunicationStatus::Success) {
-                for (unsigned int x = 0; x < it->Characteristics->Size; ++x) {
-                    auto chr = it->Characteristics->GetAt(x);
-                    m_characterstics.emplace(chr->Uuid, chr);
+    try {
+        create_task(this->m_device->GetGattServicesAsync(BluetoothCacheMode::Uncached)).then(
+                [=](GattDeviceServicesResult^result) {
+                    if (result->Status == GattCommunicationStatus::Success) {
+                        std::vector<task<GattCharacteristicsResult ^ >> find_gattchar_tasks;
+                        for (unsigned int x = 0; x < result->Services->Size; ++x) {
+                            auto service = result->Services->GetAt(x);
+                            m_services.emplace(service->Uuid, service);
+                            find_gattchar_tasks.push_back(
+                                    create_task(service->GetCharacteristicsAsync(BluetoothCacheMode::Uncached)));
+                        }
+                        return when_all(std::begin(find_gattchar_tasks), std::end(find_gattchar_tasks));
+                    }
+                    throw ref new Platform::Exception(-1, "Failed to discover gatt charactersitic");
+                }).then([=](std::vector<GattCharacteristicsResult ^ > results) {
+            for (auto it : results) {
+                if (it->Status == GattCommunicationStatus::Success) {
+                    for (unsigned int x = 0; x < it->Characteristics->Size; ++x) {
+                        auto chr = it->Characteristics->GetAt(x);
+                        m_characterstics.emplace(chr->Uuid, chr);
+                    }
+                } else {
+                    switch (it->Status) {
+                        case GattCommunicationStatus::AccessDenied :
+                            throw ref new Platform::Exception(-1, "Failed to Discover gatt characterstic (AccessDenied)");
+                        case GattCommunicationStatus::ProtocolError  :
+                            throw ref new Platform::Exception(-1, "Failed to Discover gatt characterstic (ProtocolError)");
+                        case GattCommunicationStatus::Unreachable  :
+                            throw ref new Platform::Exception(-1, "Failed to Discover gatt characterstic (Unreachable)");
+                        default:
+                            throw ref new Platform::Exception(-1, "Failed to Discover gatt characterstic (Unknown)");
+                    }
                 }
             }
-            else {
-                std::cout << "Failed to discover gatt charactersitic (status = " << static_cast<int>(it->Status) << ")";
-            }
-        }
+            m_mexPrintStream.printf("Configuring MbientSensor");
+            MblMwBtleConnection btleConnection;
+            btleConnection.context = this;
+            btleConnection.write_gatt_char = write_gatt_char;
+            btleConnection.read_gatt_char = read_gatt_char;
+            btleConnection.enable_notifications = enable_char_notify;
+            btleConnection.on_disconnect = on_disconnect;
+            this->m_metaWearBoard = mbl_mw_metawearboard_create(&btleConnection);
+            this->configureMetawear();
+        }).wait();
+    }
+    catch (Platform::Exception^e) {
+        auto str = e->Message->Data();
+        std::wstring temp(str);
+        m_mexPrintStream.printf(std::string(temp.begin(),temp.end()));
 
-        std::cout << "Configuring Mbientsensor";
-        MblMwBtleConnection btleConnection;
-        btleConnection.context = this;
-        btleConnection.write_gatt_char = write_gatt_char;
-        btleConnection.read_gatt_char = read_gatt_char;
-        btleConnection.enable_notifications = enable_char_notify;
-        btleConnection.on_disconnect = on_disconnect;
-        this->m_metaWearBoard = mbl_mw_metawearboard_create(&btleConnection);
-        this->configureMetawear();
-    }).wait();
+        for (auto it : m_characterstics)
+            delete it.second;
+        for (auto it : m_services)
+            delete it.second;
+
+        m_characterstics.clear();
+        m_services.clear();
+        if (m_device != nullptr) {
+            delete m_device;
+            m_device = nullptr;
+        }
+        m_mexPrintStream.release();
+    }
 }
 
 void MetawearWrapper::disconnect(){

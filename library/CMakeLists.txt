@@ -7,7 +7,7 @@ SET(SOURCE
         src/ConfigurationHandler.cpp
         src/QueryHandler.cpp
         src/CaptureHandler.cpp
-        src/StreamHandler.cpp)
+        src/StreamHandler.cpp src/MexPrintStream.cpp)
 SET(INCLUDE
         include/FunctionWrapper.h
         include/MetawearConfig.h
@@ -19,7 +19,7 @@ SET(INCLUDE
         include/handlers/CaptureHandler.h
         include/handlers/QueryHandler.h
         include/handlers/ConnectionHandler.h
-        include/StreamHandler.h)
+        include/StreamHandler.h include/MexPrintStream.h)
 
 
 
@@ -43,7 +43,7 @@ if (MSVC)
             )
 
     set(PLATFORM_HEADERS
-            platform/windows/include/MetawearWrapper.h include/handlers/CaptureHandler.h)
+            platform/windows/include/MetawearWrapper.h include/handlers/CaptureHandler.h include/MexPrintStream.h)
     add_compile_options("/std:c++14")
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif(MSVC)
