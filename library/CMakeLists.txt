@@ -7,7 +7,8 @@ SET(SOURCE
         src/ConfigurationHandler.cpp
         src/QueryHandler.cpp
         src/CaptureHandler.cpp
-        src/StreamHandler.cpp src/MexPrintStream.cpp)
+        src/StreamHandler.cpp src/MexPrintStream.cpp
+        src/SubscriptionHandler.cpp)
 SET(INCLUDE
         include/FunctionWrapper.h
         include/MetawearConfig.h
@@ -17,9 +18,11 @@ SET(INCLUDE
         include/StreamTypes.h
         include/handlers/ConfigurationHandler.h
         include/handlers/CaptureHandler.h
+        include/handlers/SubscriptionHandler.h
         include/handlers/QueryHandler.h
         include/handlers/ConnectionHandler.h
-        include/StreamHandler.h include/MexPrintStream.h)
+        include/StreamHandler.h
+        include/MexPrintStream.h)
 
 
 

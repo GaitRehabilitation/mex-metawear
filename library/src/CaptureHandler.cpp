@@ -44,14 +44,7 @@ CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWra
             {"disable_magnetometer", mexDisableMagnetometer},
             {"disable_sensorfusion",mexDisableSensorFusion},
 
-            // metawear('subscribe_acc',boolean: log or not to log, {filters})
-            {"subscribe_acc", mexSubscribeAcc},
-            {"subscribe_gyro", mexSubscribeGyro},
-            {"subscribe_fusion", mexSubscribeFusion},
-            {"fusion_calibrate",mexFusionCalibrate},
-
             {"query", mexQuery},
-            {"unsubscribe",mexUnSubscribe},
 
             {"start_logging", mexStartLogger},
             {"stop_logging", mexStopLogger}
@@ -67,8 +60,7 @@ void CaptureHandler::mexStartLogger(std::shared_ptr<matlab::engine::MATLABEngine
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_logging_start(board,0);
@@ -80,39 +72,28 @@ void CaptureHandler::mexStopLogger(std::shared_ptr<matlab::engine::MATLABEngine>
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
+    MexPrintStream* printStream = new MexPrintStream(engine);
+
+    printStream.setBlock();
     static auto progress_update = [](void* context, uint32_t entries_left, uint32_t total_entries)-> void {
-        printf("download progress= %d / %d\n", entries_left, total_entries);
+        MexPrintStream* p = static_cast<MexPrintStream>(context);
+        p->printf("download progress= " + std::to_string(entries_left) + "/" + std::to_string(total_entries));
         if (!entries_left) {
-            printf("download complete\n");
+            p->printf("download complete");
+            p->release();
         }
     };
     static auto unknown_entry = [](void* context, uint8_t id, int64_t epoch, const uint8_t* data, uint8_t length) -> void {
         printf("received unknown log entry: id= %d\n", id);
     };
 
-    static MblMwLogDownloadHandler download_handler = { nullptr, progress_update, unknown_entry };
+    static MblMwLogDownloadHandler download_handler = { printStream , progress_update, unknown_entry };
     mbl_mw_logging_download(board,100,&download_handler);
-}
-
-void CaptureHandler::mexUnSubscribe(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
-    CaptureHandler *handler = static_cast<CaptureHandler *>(context);
-
-    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::INPUT, inputs.size(), 3);
-    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 1);
-    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 1, inputs[1].getType(),
-                          matlab::data::ArrayType::CHAR);
-    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 2, inputs[2].getType(),
-                          matlab::data::ArrayType::CHAR);
-
-    matlab::data::CharArray address = inputs[1];
-    matlab::data::CharArray key = inputs[2];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
-    if (wrapper == nullptr) MexUtility::error(engine, "Unknown Sensor");
-    wrapper->removeHandler(key.toAscii());
+    printStream->block();
+    free(printStream);
 }
 
 void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
@@ -126,8 +107,7 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
 
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray key = inputs[2];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
-    if (wrapper == nullptr) MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
 
     StreamHandler* streamHandler = wrapper->getHandler(key.toAscii());
     //lock stream so data can retrieved without being modified
@@ -298,48 +278,6 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
 
 }
 
-void CaptureHandler::mexSubscribeGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
-    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
-
-    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
-    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::OUTPUT,outputs.size(),1);
-    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
-
-    matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
-    MblMwMetaWearBoard*  board = wrapper->getBoard();
-
-    auto gyro_signal = mbl_mw_gyro_bmi160_get_packed_rotation_data_signal(board);
-    wrapper->registerHandler("gyro",new StreamHandler(gyro_signal,StreamType::STREAMING));
-
-    matlab::data::ArrayFactory factory;
-    matlab::data::CharArray key = factory.createCharArray("gyro");
-    outputs[0] = key;
-
-}
-
-void CaptureHandler::mexSubscribeAcc(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
-    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
-
-    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
-    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::OUTPUT,outputs.size(),1);
-    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
-
-    matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
-    MblMwMetaWearBoard*  board = wrapper->getBoard();
-
-    auto acc_signal = mbl_mw_acc_get_packed_acceleration_data_signal(board);
-    wrapper->registerHandler("acc",new StreamHandler(acc_signal,StreamType::STREAMING));
-
-    matlab::data::ArrayFactory factory;
-    matlab::data::CharArray key = factory.createCharArray("acc");
-    outputs[0] = key;
-
-}
-
 void CaptureHandler::mexSetSensorFusionFlag(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
     CaptureHandler *handler = static_cast<CaptureHandler *>(context);
 
@@ -350,8 +288,7 @@ void CaptureHandler::mexSetSensorFusionFlag(std::shared_ptr<matlab::engine::MATL
                           matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address = inputs[1];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
-    if (wrapper == nullptr) MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard *board = wrapper->getBoard();
 
     matlab::data::CharArray type = inputs[2];
@@ -369,140 +306,6 @@ void CaptureHandler::mexSetSensorFusionFlag(std::shared_ptr<matlab::engine::MATL
         mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_GRAVITY_VECTOR);
     } else if (type.toAscii() == "LINEAR_ACC") {
         mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_LINEAR_ACC);
-    } else {
-        MexUtility::error(engine,
-                          "Fusion Supports Parameter: CORRECTED_ACC, CORRECTED_GYRO, QUATERNION, EULER_ANGLE, GRAVITY_VECTOR, LINEAR_ACC");
-    }
-}
-void CaptureHandler::mexFusionCalibrate(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
-    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
-    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
-    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
-
-
-    matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
-    MblMwMetaWearBoard*  board = wrapper->getBoard();
-
-    auto signal = mbl_mw_sensor_fusion_calibration_state_data_signal(board);
-    struct Payload{
-        std::queue<MblMwCalibrationState*> queue;
-        std::mutex lock;
-    };
-    auto c = new Payload();
-    mbl_mw_datasignal_subscribe(signal, c, [](void* context, const MblMwData* data) {
-        Payload* results = ( Payload*)context;
-        MblMwCalibrationState* casted = (MblMwCalibrationState*) data->value;
-        MblMwCalibrationState* temp = new MblMwCalibrationState();
-        memcpy(temp,casted, sizeof(MblMwCalibrationState));
-        results->lock.lock();
-        results->queue.push(temp);
-        results->lock.unlock();
-    });
-
-    mbl_mw_sensor_fusion_set_mode(board,MBL_MW_SENSOR_FUSION_MODE_NDOF);
-    mbl_mw_sensor_fusion_write_config(board);
-
-    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_ACC);
-    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_GYRO);
-    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_MAG);
-    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_EULER_ANGLE);
-    mbl_mw_sensor_fusion_start(board);
-
-    bool isCalibrated = false;
-    do {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        c->lock.lock();
-        while (!c->queue.empty()) {
-            MblMwCalibrationState *entry = c->queue.front();
-            MexUtility::printf(engine, "calibration state: {accelerometer: " + std::to_string(entry->accelrometer) +
-                                       +", gyroscope: " + std::to_string(entry->gyroscope) +
-                                       +", magnetometer: " + std::to_string(entry->magnetometer) +
-                                       +"} \n");
-            if (!isCalibrated) {
-                isCalibrated = (entry->accelrometer == 3 && entry->gyroscope == 3 && entry->magnetometer == 3);
-            }
-            free(entry);
-            c->queue.pop();
-        }
-        c->lock.unlock();
-        mbl_mw_datasignal_read(signal);
-    }
-    while(!isCalibrated);
-    mbl_mw_datasignal_unsubscribe(signal);
-    delete(c);
-}
-
-
-void CaptureHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
-    CaptureHandler *handler = static_cast<CaptureHandler *>(context);
-
-    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::INPUT, inputs.size(), 3);
-    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 1);
-    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 1, inputs[1].getType(),
-                          matlab::data::ArrayType::CHAR);
-    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 2, inputs[2].getType(),
-                          matlab::data::ArrayType::CHAR);
-
-    matlab::data::CharArray address = inputs[1];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
-    if (wrapper == nullptr) MexUtility::error(engine, "Unknown Sensor");
-    MblMwMetaWearBoard *board = wrapper->getBoard();
-
-    matlab::data::CharArray type = inputs[2];
-    if (type.toAscii() == "CORRECTED_ACC") {
-
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_ACC);
-        wrapper->registerHandler("fusion_corrected_acc", new StreamHandler(quaternion_signal, StreamType::STREAMING));
-
-        matlab::data::ArrayFactory factory;
-        matlab::data::CharArray key = factory.createCharArray("fusion_corrected_acc");
-        outputs[0] = key;
-    } else if (type.toAscii() == "CORRECTED_GYRO") {
-
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_GYRO);
-        wrapper->registerHandler("fusion_corrected_gyro", new StreamHandler(quaternion_signal, StreamType::STREAMING));
-
-        matlab::data::ArrayFactory factory;
-        matlab::data::CharArray key = factory.createCharArray("fusion_corrected_gyro");
-        outputs[0] = key;
-    } else if (type.toAscii() == "CORRECTED_MAG") {
-
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_MAG);
-        wrapper->registerHandler("fusion_corrected_mag", new StreamHandler(quaternion_signal, StreamType::STREAMING));
-
-        matlab::data::ArrayFactory factory;
-        matlab::data::CharArray key = factory.createCharArray("fusion_corrected_mag");
-        outputs[0] = key;
-    } else if (type.toAscii() == "QUATERNION") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_QUATERNION);
-        wrapper->registerHandler("fusion_quaternion", new StreamHandler(quaternion_signal, StreamType::STREAMING));
-
-        matlab::data::ArrayFactory factory;
-        matlab::data::CharArray key = factory.createCharArray("fusion_quaternion");
-        outputs[0] = key;
-    } else if (type.toAscii() == "EULER_ANGLE") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_EULER_ANGLE);
-        wrapper->registerHandler("fusion_euler", new StreamHandler(quaternion_signal, StreamType::STREAMING));
-
-        matlab::data::ArrayFactory factory;
-        matlab::data::CharArray key = factory.createCharArray("fusion_euler");
-        outputs[0] = key;
-    } else if (type.toAscii() == "GRAVITY_VECTOR") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_GRAVITY_VECTOR);
-        wrapper->registerHandler("fusion_gravity_vector", new StreamHandler(quaternion_signal, StreamType::STREAMING));
-
-        matlab::data::ArrayFactory factory;
-        matlab::data::CharArray key = factory.createCharArray("fusion_gravity_vector");
-        outputs[0] = key;
-    } else if (type.toAscii() == "LINEAR_ACC") {
-        auto quaternion_signal = mbl_mw_sensor_fusion_get_data_signal(board, MBL_MW_SENSOR_FUSION_DATA_LINEAR_ACC);
-        wrapper->registerHandler("fusion_linear_acc", new StreamHandler(quaternion_signal, StreamType::STREAMING));
-
-        matlab::data::ArrayFactory factory;
-        matlab::data::CharArray key = factory.createCharArray("fusion_linear_acc");
-        outputs[0] = key;
     } else {
         MexUtility::error(engine,
                           "Fusion Supports Parameter: CORRECTED_ACC, CORRECTED_GYRO, QUATERNION, EULER_ANGLE, GRAVITY_VECTOR, LINEAR_ACC");
@@ -529,8 +332,7 @@ void CaptureHandler::mexDisableSensorFusion(std::shared_ptr<matlab::engine::MATL
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_sensor_fusion_clear_enabled_mask(board);
@@ -544,8 +346,7 @@ void CaptureHandler::mexEnableMagnetometer(std::shared_ptr<matlab::engine::MATLA
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_mag_bmm150_enable_b_field_sampling(board);
@@ -558,8 +359,7 @@ void CaptureHandler::mexDisableMagnetometer(std::shared_ptr<matlab::engine::MATL
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_mag_bmm150_disable_b_field_sampling(board);
@@ -574,8 +374,7 @@ void CaptureHandler::mexEnableGyro(std::shared_ptr<matlab::engine::MATLABEngine>
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_enable_rotation_sampling(board);
     mbl_mw_gyro_bmi160_start(board);
@@ -590,7 +389,7 @@ void  CaptureHandler::mexEnableAccelerometer(std::shared_ptr<matlab::engine::MAT
     }
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard* board = wrapper->getBoard();
     mbl_mw_acc_enable_acceleration_sampling(board);
     mbl_mw_acc_start(board);
@@ -606,7 +405,7 @@ void CaptureHandler::mexDisableGyro(std::shared_ptr<matlab::engine::MATLABEngine
     }
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard* board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_disable_rotation_sampling(board);
     mbl_mw_gyro_bmi160_stop(board);
@@ -621,8 +420,8 @@ void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MAT
     }
 
     matlab::data::CharArray address = inputs[1];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
-    MblMwMetaWearBoard* board = wrapper->getBoard();
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MblMwMetaWearBoard *board = wrapper->getBoard();
     mbl_mw_acc_disable_acceleration_sampling(board);
     mbl_mw_acc_stop(board);
 }
@@ -631,3 +430,4 @@ void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MAT
 CaptureHandler::~CaptureHandler() {
 
 }
+

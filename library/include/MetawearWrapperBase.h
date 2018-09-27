@@ -32,9 +32,6 @@
 
 class MetawearWrapperBase {
 protected:
-    std::string m_firmwareVersion;
-    std::string m_model;
-
     volatile bool m_isConnected;
 
     std::string m_mac;
@@ -48,7 +45,7 @@ protected:
 public:
     bool hasHandler(const std::string &);
 
-    bool registerHandler(const std::string &, StreamHandler *);
+    std::string registerHandler( StreamHandler *);
 
     bool removeHandler(const std::string &);
 
@@ -61,8 +58,6 @@ public:
     const std::string &getMacAddress() const;
 
     virtual void connect() = 0;
-
-    virtual void disconnect() = 0;
 
     void mexStreamBlock();
 

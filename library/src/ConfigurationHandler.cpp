@@ -49,11 +49,36 @@ ConfigurationHandler::ConfigurationHandler(ConnectionHandler* connectionHandler,
 
             {"configure_fusion_mode", mexConfigureSensorFusionMode},
             {"configure_fusion_range", mexConfigureSensorFusionRange},
-            {"configure_fusion_write", mexConfigureSensorFusionWrite}
+            {"configure_fusion_write", mexConfigureSensorFusionWrite},
+
+            {"fusion_calibrate",mexFusionCalibrate},
+            {"set_connection_parameters",mexConfigureConnectionSettings}
     };
     wrapper->registerMethod(this, functions);
 }
 
+
+
+void ConfigurationHandler::mexConfigureConnectionSettings(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
+    ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
+
+    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::INPUT, inputs.size(), 5);
+    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 1, inputs[1].getType(),matlab::data::ArrayType::CHAR);
+    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 2, inputs[2].getType(),matlab::data::ArrayType::DOUBLE);
+    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 3, inputs[2].getType(),matlab::data::ArrayType::DOUBLE);
+    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 4, inputs[2].getType(),matlab::data::ArrayType::DOUBLE);
+
+    matlab::data::CharArray address = inputs[1];
+    matlab::data::TypedArray<double> min_connection_interval = inputs[2];
+    matlab::data::TypedArray<double> max_connection_interval = inputs[2];
+    matlab::data::TypedArray<double> latency= inputs[2];
+    matlab::data::TypedArray<double> timeout= inputs[2];
+
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MblMwMetaWearBoard *board = wrapper->getBoard();
+
+    mbl_mw_settings_set_connection_parameters(board, static_cast<float>(min_connection_interval[0]), static_cast<float>(max_connection_interval[0]), static_cast<uint16_t>(latency[0]), (uint16_t)timeout[0]);
+}
 
 
 void ConfigurationHandler::mexConfigureAccelerometerSample(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,
@@ -66,8 +91,7 @@ void ConfigurationHandler::mexConfigureAccelerometerSample(std::shared_ptr<matla
 
     matlab::data::CharArray address =  inputs[1];
     matlab::data::TypedArray<double> sample = inputs[2];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_acc_set_odr(board ,(float)sample[0]);
 }
@@ -82,8 +106,7 @@ void ConfigurationHandler::mexConfigureAccelerometerRange(std::shared_ptr<matlab
 
     matlab::data::CharArray address =  inputs[1];
     matlab::data::TypedArray<double> range = inputs[2];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_acc_set_range(board ,(float)range[0]);
 
@@ -98,8 +121,7 @@ void ConfigurationHandler::mexConfigureAccelerometerWrite(std::shared_ptr<matlab
 
     matlab::data::CharArray address =  inputs[1];
     matlab::data::TypedArray<double> range = inputs[2];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_acc_write_acceleration_config(board );
 }
@@ -113,8 +135,7 @@ void ConfigurationHandler::mexConfigureGyroWrite(std::shared_ptr<matlab::engine:
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_write_config(board);
 }
@@ -148,7 +169,7 @@ void ConfigurationHandler::mexConfigureGyroRange(std::shared_ptr<matlab::engine:
             MexUtility::error(engine, "Gyro supported ranges: 2000dps, 1000dps, 500dps, 250dps, 125dps ");
     }
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_set_range(board, range);
@@ -195,8 +216,7 @@ void ConfigurationHandler::mexConfigureGyroRange(std::shared_ptr<matlab::engine:
             return;
     }
 
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_set_odr(board,sample);
 }
@@ -227,8 +247,7 @@ void ConfigurationHandler::mexConfigureMagnetometerPowerPreset(std::shared_ptr<m
     else{
         MexUtility::error(engine, "Supported power preset: LOW_POWER, REGULAR, ENHANCED_REGULAR, HIGH_ACCURACY");
     }
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_mag_bmm150_set_preset(board,preset);
 }
@@ -244,7 +263,7 @@ void ConfigurationHandler::mexConfigureBarometerStandby(std::shared_ptr<matlab::
     matlab::data::CharArray address =  inputs[1];
     matlab::data::TypedArray<double> input = inputs[2];
 
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_baro_bosch_set_standby_time(board, (float)input[0]);
@@ -260,8 +279,7 @@ void ConfigurationHandler::mexConfigureBarometerOversampling(std::shared_ptr<mat
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray input = inputs[2];
 
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     MblMwBaroBoschOversampling oversampling = MblMwBaroBoschOversampling::MBL_MW_BARO_BOSCH_OVERSAMPLING_SKIP;
@@ -293,8 +311,7 @@ void ConfigurationHandler::mexConfigureBarometerImpulseFilter(std::shared_ptr<ma
     matlab::data::CharArray address =  inputs[1];
     matlab::data::TypedArray<double> input = inputs[2];
 
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     MblMwBaroBoschIirFilter iir = MBL_MW_BARO_BOSCH_IIR_FILTER_OFF;
@@ -327,8 +344,7 @@ void ConfigurationHandler::mexConfigureBarometerWrite(std::shared_ptr<matlab::en
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_baro_bosch_write_config(board);
 }
@@ -343,8 +359,7 @@ void ConfigurationHandler::mexConfigureSensorFusionMode(std::shared_ptr<matlab::
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray input = inputs[2];
 
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     MblMwSensorFusionMode mode = MBL_MW_SENSOR_FUSION_MODE_NDOF;
@@ -372,8 +387,7 @@ void ConfigurationHandler::mexConfigureSensorFusionRange(std::shared_ptr<matlab:
     matlab::data::CharArray address =  inputs[1];
     matlab::data::TypedArray<double> input = inputs[2];
 
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     MblMwSensorFusionAccRange fusionRange;
@@ -402,13 +416,10 @@ void ConfigurationHandler::mexConfigureSensorFusionWrite(std::shared_ptr<matlab:
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->getDevice(address.toAscii());
-    if(wrapper == nullptr)  MexUtility::error(engine, "Unknown Sensor");
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_sensor_fusion_write_config(board);
 }
-
-
 
 void ConfigurationHandler::mexConfigureProximity(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
 
@@ -426,6 +437,63 @@ void ConfigurationHandler::mexConfigureHumidity(std::shared_ptr<matlab::engine::
 
 }
 
+void ConfigurationHandler::mexFusionCalibrate(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    auto signal = mbl_mw_sensor_fusion_calibration_state_data_signal(board);
+    struct Payload{
+        std::queue<MblMwCalibrationState*> queue;
+        std::mutex lock;
+    };
+    auto c = new Payload();
+    mbl_mw_datasignal_subscribe(signal, c, [](void* context, const MblMwData* data) {
+        Payload* results = ( Payload*)context;
+        MblMwCalibrationState* casted = (MblMwCalibrationState*) data->value;
+        MblMwCalibrationState* temp = new MblMwCalibrationState();
+        memcpy(temp,casted, sizeof(MblMwCalibrationState));
+        results->lock.lock();
+        results->queue.push(temp);
+        results->lock.unlock();
+    });
+
+    mbl_mw_sensor_fusion_set_mode(board,MBL_MW_SENSOR_FUSION_MODE_NDOF);
+    mbl_mw_sensor_fusion_write_config(board);
+
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_ACC);
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_GYRO);
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_CORRECTED_MAG);
+    mbl_mw_sensor_fusion_enable_data(board, MBL_MW_SENSOR_FUSION_DATA_EULER_ANGLE);
+    mbl_mw_sensor_fusion_start(board);
+
+    bool isCalibrated = false;
+    do {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        c->lock.lock();
+        while (!c->queue.empty()) {
+            MblMwCalibrationState *entry = c->queue.front();
+            MexUtility::printf(engine, "calibration state: {accelerometer: " + std::to_string(entry->accelrometer) +
+                                       +", gyroscope: " + std::to_string(entry->gyroscope) +
+                                       +", magnetometer: " + std::to_string(entry->magnetometer) +
+                                       +"} \n");
+            if (!isCalibrated) {
+                isCalibrated = (entry->accelrometer == 3 && entry->gyroscope == 3 && entry->magnetometer == 3);
+            }
+            free(entry);
+            c->queue.pop();
+        }
+        c->lock.unlock();
+        mbl_mw_datasignal_read(signal);
+    }
+    while(!isCalibrated);
+    mbl_mw_datasignal_unsubscribe(signal);
+    delete(c);
+}
 
 
 

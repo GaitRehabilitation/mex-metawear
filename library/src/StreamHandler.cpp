@@ -1,13 +1,25 @@
-//
-// Created by Michael on 9/5/2018.
-//
+/**
+* Copyright 2018 GaitRehabilitation
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 #include <StreamHandler.h>
 #include <metawear/core/logging.h>
 
 #include "StreamHandler.h"
 
-StreamHandler::StreamHandler(MblMwDataSignal* signal,StreamType type){
+StreamHandler::StreamHandler(MblMwDataSignal* signal, StreamType type, const std::string& root_handler): m_root_handler(root_handler), m_stream_type(type) {
     m_data = new std::queue<StreamEntry*>();
     m_logger_signal = nullptr;
     m_signal = signal;
@@ -72,8 +84,7 @@ StreamEntry::StreamEntry(const MblMwData *data) :
             }
             m_data = output;
         }
-
-            break;
+        break;
         case MblMwDataTypeId::MBL_MW_DT_ID_FLOAT: {
             auto c = static_cast<float *>(data->value);
             auto output = new float(*c);
@@ -177,16 +188,24 @@ StreamEntry *StreamHandler::peek(){
 void StreamHandler::pop() {
     m_data->pop();
 }
+
+std::string StreamHandler::getKey(){
+    switch (m_stream_type){
+        case StreamType::LOG:
+            return m_root_handler + "_logging";
+        case StreamType::STREAMING:
+            return m_root_handler + "_streaming";
+    }
+    return m_root_handler;
+}
+
 unsigned int StreamHandler::size(){
     return m_data->size();
 }
 
-
 MblMwDataSignal* StreamHandler::getSignal(){
     return m_signal;
 }
-
-
 
 StreamEntry::~StreamEntry() {
     free(m_data);
@@ -195,3 +214,4 @@ StreamEntry::~StreamEntry() {
 MblMwDataTypeId StreamEntry::getType() {
     return m_type;
 }
+

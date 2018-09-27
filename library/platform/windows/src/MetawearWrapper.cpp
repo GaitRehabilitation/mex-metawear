@@ -1,5 +1,3 @@
-#include <utility>
-
 /**
 * Copyright 2018 GaitRehabilitation
 *
@@ -16,6 +14,7 @@
 * limitations under the License.
 */
 
+#include <utility>
 #include "MetawearWrapper.h"
 
 #include <metawear/core/status.h>
@@ -100,8 +99,8 @@ void MetawearWrapper::enable_char_notify(void *context, const void *caller, cons
 
 void MetawearWrapper::on_disconnect(void *context, const void *caller, MblMwFnVoidVoidPtrInt handler){
     auto *wrapper = static_cast<MetawearWrapper *>(context);
+    wrapper->m_isConnected = false;
 }
-
 
 MetawearWrapper::MetawearWrapper(const std::string& mac,std::shared_ptr<matlab::engine::MATLABEngine> engine):
     MetawearWrapperBase::MetawearWrapperBase(mac, std::move(engine)),
@@ -121,7 +120,6 @@ MetawearWrapper::MetawearWrapper(const std::string& mac,std::shared_ptr<matlab::
 
 }
 
-
 MetawearWrapper::~MetawearWrapper(){
     for (auto it : m_characterstics)
         delete it.second;
@@ -135,8 +133,6 @@ MetawearWrapper::~MetawearWrapper(){
         m_device = nullptr;
     }
 }
-
-
 
 void MetawearWrapper::connect() {
     m_mexPrintStream.clear();
@@ -174,7 +170,6 @@ void MetawearWrapper::connect() {
     });
 }
 
-
 GattCharacteristic^  MetawearWrapper::findCharacterstic(uint64_t low, uint64_t high) {
 	unsigned int data0 = uint8_t((high >> 56) & 0xFF) | uint8_t((high >> 48) & 0xFF) << 8 | uint8_t((high >> 40) & 0xFF) << 16 | uint8_t((high >> 32) & 0xFF) << 24;
 	unsigned short data1 = uint8_t((high >> 24) & 0xFF) | uint8_t((high >> 16) & 0xFF) << 8;
@@ -198,7 +193,7 @@ GattCharacteristic^  MetawearWrapper::findCharacterstic(uint64_t low, uint64_t h
 		if (it != m_characterstics.end())
 			return it->second;
 	}
-	std::cout << "Failed to find characterstic";
+	m_mexPrintStream.printf("Failed to find characteric");
 	return nullptr;
 }
 
@@ -266,8 +261,4 @@ void MetawearWrapper::startDiscovery(){
         }
         m_mexPrintStream.release();
     }
-}
-
-void MetawearWrapper::disconnect(){
-
 }

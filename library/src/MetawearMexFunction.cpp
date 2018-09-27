@@ -28,8 +28,9 @@
 #include "handlers/CaptureHandler.h"
 #include "handlers/QueryHandler.h"
 #include "handlers/ConfigurationHandler.h"
-
+#include "handlers/SubscriptionHandler.h"
 #include <strstream>
+
 MexFunction::MexFunction() : matlab::mex::Function(),
     m_devices(),
     m_functionWrapper(new FunctionWrapper()){
@@ -39,6 +40,7 @@ MexFunction::MexFunction() : matlab::mex::Function(),
     m_configurationHandler = new ConfigurationHandler(m_connectionHandler,m_functionWrapper);
     m_captureHandler = new CaptureHandler(m_connectionHandler,m_functionWrapper);
     m_queryHandler = new QueryHandler(m_connectionHandler,m_functionWrapper);
+    m_subscrptionHandler = new SubscriptionHandler(m_connectionHandler,m_functionWrapper);
 
     std::map<std::string, WrapperMethod *> functions =  {
             {"info", mexDebugCapture}

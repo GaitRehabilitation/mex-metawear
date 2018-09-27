@@ -31,6 +31,7 @@ class ConnectionHandler;
 class CaptureHandler;
 class QueryHandler;
 class ConfigurationHandler;
+class SubscriptionHandler;
 class MexFunction : public matlab::mex::Function {
 private:
     std::map<std::string,MetawearWrapper*> m_devices;
@@ -42,6 +43,7 @@ private:
     CaptureHandler* m_captureHandler;
     QueryHandler* m_queryHandler;
     ConfigurationHandler* m_configurationHandler;
+    SubscriptionHandler* m_subscrptionHandler;
 
 public:
     MexFunction ();

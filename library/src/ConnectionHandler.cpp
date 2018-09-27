@@ -33,6 +33,17 @@ ConnectionHandler::~ConnectionHandler() {
 
 }
 
+MetawearWrapper *ConnectionHandler::mexGetDeviceAndVerify(std::shared_ptr<matlab::engine::MATLABEngine> engine,const std::string &mac){
+    MetawearWrapper* wrapper = getDevice(mac);
+    if(wrapper == nullptr)
+        MexUtility::error(engine,"Unknown Device");
+    if(!wrapper->isConnected()) {
+        removeDevice(mac);
+        MexUtility::error(engine, "Device is Not Connected");
+    }
+    return wrapper;
+}
+
 MetawearWrapper* ConnectionHandler::getDevice(const std::string& mac){
     auto  it = m_devices.find(mac);
     if (it != m_devices.end()) {
@@ -115,8 +126,7 @@ void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEng
         return;
     }
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->getDevice(address.toAscii());
-
-    wrapper->disconnect();
+    MetawearWrapper* wrapper =  handler->removeDevice(address.toAscii());
+    free(wrapper);
     wrapper->mexStreamBlock();
 }

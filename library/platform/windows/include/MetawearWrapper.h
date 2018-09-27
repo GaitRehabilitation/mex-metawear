@@ -77,7 +77,6 @@ public:
 
     void connect() override;
 
-    void disconnect() override;
 };
 
 #endif //MEX_METAWEAR_METAWEARWRAPPER_H

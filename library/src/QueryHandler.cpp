@@ -38,10 +38,7 @@ void QueryHandler::mexQueryBoardInfo(std::shared_ptr<matlab::engine::MATLABEngin
         MexUtility::error(engine, "Two Inputs Required");
 
     matlab::data::CharArray address = inputs[1];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->getDevice(address.toAscii());
-    if (wrapper == nullptr) {
-        MexUtility::error(engine, "Invalid wrapper");
-    }
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
 
     MblMwMetaWearBoard *board = wrapper->getBoard();
     auto dev_info = mbl_mw_metawearboard_get_device_information(board);
