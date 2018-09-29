@@ -24,9 +24,11 @@
 
 class FunctionWrapper;
 class ConnectionHandler;
+class MexPrintStream;
 class CaptureHandler{
 private:
     ConnectionHandler* m_connectionHandler;
+    MexPrintStream* m_printStream;
 public:
     CaptureHandler(ConnectionHandler* connectionHandler,FunctionWrapper* wrapper);
     ~CaptureHandler();
@@ -56,6 +58,9 @@ public:
      * @param inputs
      */
     static void mexStopLogger(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
+    static void mexDownloadLogger(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
+    static void mexClearLogger(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
+
 
     static void mexEnableGyro(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
     static void mexEnableAccelerometer(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);

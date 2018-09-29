@@ -29,7 +29,8 @@
 #include <chrono>         // std::chrono::seconds
 
 CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWrapper *wrapper):
-    m_connectionHandler(connectionHandler){
+    m_connectionHandler(connectionHandler),m_printStream(nullptr){
+
     std::map<std::string, WrapperMethod *> functions =  {
             //enable
             {"enable_gyro", mexEnableGyro},
@@ -47,7 +48,9 @@ CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWra
             {"query", mexQuery},
 
             {"start_logging", mexStartLogger},
-            {"stop_logging", mexStopLogger}
+            {"stop_logging", mexStopLogger},
+            {"clear_logging", mexClearLogger},
+            {"download_logging", mexDownloadLogger}
 
     };
     wrapper->registerMethod(this, functions);
@@ -60,7 +63,7 @@ void CaptureHandler::mexStartLogger(std::shared_ptr<matlab::engine::MATLABEngine
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_logging_start(board,0);
@@ -72,14 +75,43 @@ void CaptureHandler::mexStopLogger(std::shared_ptr<matlab::engine::MATLABEngine>
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
-    MexPrintStream* printStream = new MexPrintStream(engine);
+    mbl_mw_logging_stop(board);
+}
 
-    printStream.setBlock();
+void CaptureHandler::mexClearLogger(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    mbl_mw_logging_clear_entries(board);
+}
+
+void CaptureHandler::mexDownloadLogger(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    MexUtility::printf(engine,"Downloading Logging Data \n");
+
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+
+    if(handler->m_printStream == nullptr)
+        handler->m_printStream = new MexPrintStream(engine);
+
+    handler->m_printStream->setBlock();
     static auto progress_update = [](void* context, uint32_t entries_left, uint32_t total_entries)-> void {
-        MexPrintStream* p = static_cast<MexPrintStream>(context);
+        MexPrintStream* p = static_cast<MexPrintStream*>(context);
         p->printf("download progress= " + std::to_string(entries_left) + "/" + std::to_string(total_entries));
         if (!entries_left) {
             p->printf("download complete");
@@ -90,10 +122,11 @@ void CaptureHandler::mexStopLogger(std::shared_ptr<matlab::engine::MATLABEngine>
         printf("received unknown log entry: id= %d\n", id);
     };
 
-    static MblMwLogDownloadHandler download_handler = { printStream , progress_update, unknown_entry };
+    static MblMwLogDownloadHandler download_handler = { handler->m_printStream , progress_update, unknown_entry };
     mbl_mw_logging_download(board,100,&download_handler);
-    printStream->block();
-    free(printStream);
+    handler->m_printStream->block();
+    MexUtility::printf(engine,"Finished Downloading Data \n");
+
 }
 
 void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
@@ -107,7 +140,7 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
 
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray key = inputs[2];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
 
     StreamHandler* streamHandler = wrapper->getHandler(key.toAscii());
     //lock stream so data can retrieved without being modified
@@ -288,7 +321,7 @@ void CaptureHandler::mexSetSensorFusionFlag(std::shared_ptr<matlab::engine::MATL
                           matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address = inputs[1];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard *board = wrapper->getBoard();
 
     matlab::data::CharArray type = inputs[2];
@@ -332,7 +365,7 @@ void CaptureHandler::mexDisableSensorFusion(std::shared_ptr<matlab::engine::MATL
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_sensor_fusion_clear_enabled_mask(board);
@@ -346,7 +379,7 @@ void CaptureHandler::mexEnableMagnetometer(std::shared_ptr<matlab::engine::MATLA
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_mag_bmm150_enable_b_field_sampling(board);
@@ -359,7 +392,7 @@ void CaptureHandler::mexDisableMagnetometer(std::shared_ptr<matlab::engine::MATL
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     mbl_mw_mag_bmm150_disable_b_field_sampling(board);
@@ -374,7 +407,7 @@ void CaptureHandler::mexEnableGyro(std::shared_ptr<matlab::engine::MATLABEngine>
     MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_enable_rotation_sampling(board);
     mbl_mw_gyro_bmi160_start(board);
@@ -389,7 +422,7 @@ void  CaptureHandler::mexEnableAccelerometer(std::shared_ptr<matlab::engine::MAT
     }
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard* board = wrapper->getBoard();
     mbl_mw_acc_enable_acceleration_sampling(board);
     mbl_mw_acc_start(board);
@@ -405,7 +438,7 @@ void CaptureHandler::mexDisableGyro(std::shared_ptr<matlab::engine::MATLABEngine
     }
 
     matlab::data::CharArray address =  inputs[1];
-    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard* board = wrapper->getBoard();
     mbl_mw_gyro_bmi160_disable_rotation_sampling(board);
     mbl_mw_gyro_bmi160_stop(board);
@@ -420,7 +453,7 @@ void CaptureHandler::mexDisableAccelerometer(std::shared_ptr<matlab::engine::MAT
     }
 
     matlab::data::CharArray address = inputs[1];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard *board = wrapper->getBoard();
     mbl_mw_acc_disable_acceleration_sampling(board);
     mbl_mw_acc_stop(board);

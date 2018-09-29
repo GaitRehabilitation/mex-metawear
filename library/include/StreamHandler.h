@@ -22,6 +22,7 @@
 #include <metawear/core/datasignal.h>
 #include <metawear/core/types.h>
 #include <mutex>
+#include "MexPrintStream.h"
 
 struct MblMwDataSignal;
 enum StreamType{
@@ -35,6 +36,7 @@ private:
     void* m_data;
     uint8_t m_length;
     MblMwDataTypeId m_type;
+    MexPrintStream* m_printStream;
 public:
     MblMwDataTypeId  getType();
     int64_t getEpoch();
@@ -57,6 +59,7 @@ private:
 public:
     StreamHandler(MblMwDataSignal* signal,StreamType type, const std::string& root_handler);
     ~StreamHandler();
+    void configure();
     void lockStream();
     void unLockStream();
     StreamEntry* peek();

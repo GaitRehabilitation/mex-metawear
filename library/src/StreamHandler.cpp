@@ -19,21 +19,18 @@
 
 #include "StreamHandler.h"
 
-StreamHandler::StreamHandler(MblMwDataSignal* signal, StreamType type, const std::string& root_handler): m_root_handler(root_handler), m_stream_type(type) {
-    m_data = new std::queue<StreamEntry*>();
-    m_logger_signal = nullptr;
-    m_signal = signal;
-    switch (type) {
+void StreamHandler::configure() {
+    switch (m_stream_type){
         case StreamType::LOG:
-            mbl_mw_datasignal_log(signal, this, [](void* context, MblMwDataLogger* logger) -> void {
-                auto handler = static_cast<StreamHandler *>(context);
+            mbl_mw_datasignal_log(m_signal, this, [](void* context, MblMwDataLogger* logger) -> void {
+                auto h = static_cast<StreamHandler *>(context);
                 if (logger != nullptr) {
-                    handler->m_logger_signal = logger;
-                    mbl_mw_logger_subscribe(logger, handler, [](void *context, const MblMwData *data) -> void {
-                        StreamHandler*  handler = static_cast<StreamHandler *>(context);
-                         handler->m_data_lock.lock();
-                         handler->m_data->push(new StreamEntry(data));
-                         handler->m_data_lock.unlock();
+                    h->m_logger_signal = logger;
+                    mbl_mw_logger_subscribe(logger, context, [](void *context, const MblMwData *data) -> void {
+                        auto*  handler = static_cast<StreamHandler *>(context);
+                        handler->m_data_lock.lock();
+                        handler->m_data->push(new StreamEntry(data));
+                        handler->m_data_lock.unlock();
                     });
 
                     printf("logger ready\n");
@@ -42,10 +39,9 @@ StreamHandler::StreamHandler(MblMwDataSignal* signal, StreamType type, const std
                 }
             });
 
-
             break;
-        case StreamType::STREAMING :
-            mbl_mw_datasignal_subscribe(signal, this, [](void *context, const MblMwData *data) -> void {
+        case StreamType::STREAMING:
+            mbl_mw_datasignal_subscribe(m_signal, this, [](void *context, const MblMwData *data) -> void {
                 auto handler = static_cast<StreamHandler *>(context);
                 handler->m_data_lock.lock();
                 handler->m_data->push(new StreamEntry(data));
@@ -53,6 +49,15 @@ StreamHandler::StreamHandler(MblMwDataSignal* signal, StreamType type, const std
             });
             break;
     }
+}
+
+StreamHandler::StreamHandler(MblMwDataSignal* signal, StreamType type, const std::string& root_handler):
+    m_root_handler(root_handler),
+    m_stream_type(type),
+    m_data(new std::queue<StreamEntry*>()),
+    m_logger_signal(nullptr),
+    m_signal(signal) {
+
 }
 
 

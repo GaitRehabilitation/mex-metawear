@@ -53,7 +53,7 @@ void SubscriptionHandler::mexSubscribeGyro(std::shared_ptr<matlab::engine::MATLA
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray type = inputs[2];
 
-    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard *board = wrapper->getBoard();
 
     matlab::data::ArrayFactory factory;
@@ -82,7 +82,7 @@ void SubscriptionHandler::mexSubscribeAcc(std::shared_ptr<matlab::engine::MATLAB
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray type = inputs[2];
 
-    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard *board = wrapper->getBoard();
 
     matlab::data::ArrayFactory factory;
@@ -113,7 +113,7 @@ void SubscriptionHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MAT
     matlab::data::CharArray mode = inputs[2];
     matlab::data::CharArray type = inputs[3];
 
-    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard *board = wrapper->getBoard();
 
     matlab::data::ArrayFactory factory;
@@ -153,14 +153,14 @@ void SubscriptionHandler::mexUnSubscribe(std::shared_ptr<matlab::engine::MATLABE
 
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray key = inputs[2];
-    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(address.toAscii());
+    MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     wrapper->removeHandler(key.toAscii());
 }
 
 StreamType SubscriptionHandler::getSubscriptionMode(std::shared_ptr<matlab::engine::MATLABEngine> engine,const std::string &target) {
     if (target == "STREAMING") {
         return StreamType::STREAMING;
-    } else if (target == "LOGGING") {
+    } else if (target == "LOG") {
         return StreamType::LOG;
     }
     MexUtility::error(std::move(engine), "Supported Types: STREAMING, LOG");

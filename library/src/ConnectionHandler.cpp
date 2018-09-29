@@ -24,7 +24,8 @@
 ConnectionHandler::ConnectionHandler(FunctionWrapper* wrapper): m_devices() {
     std::map<std::string, WrapperMethod *> functions = {
             {"connect",    mexConnect},
-            {"disconnect", mexDisconnect}
+            {"disconnect", mexDisconnect},
+            {"disconnect_all",mexDisconnectAlldevices}
     };
     wrapper->registerMethod(this, functions);
 }
@@ -64,8 +65,7 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
 
 }
 
- void ConnectionHandler::mexConnect(std::shared_ptr<matlab::engine::MATLABEngine> engine,
-         void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
+ void ConnectionHandler::mexConnect(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
      auto *handler = static_cast<ConnectionHandler *>(context);
 
      if (inputs.size() != 2)
@@ -118,6 +118,14 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
          outputs[0] = addressCharArray;
      }
  }
+
+void ConnectionHandler::mexDisconnectAlldevices(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs){
+    auto *handler = static_cast<ConnectionHandler *>(context);
+    for (auto it = handler->m_devices.begin(); it != handler->m_devices.end(); it++){
+        free(it->second);
+    }
+    handler->m_devices.clear();
+}
 
 void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
     ConnectionHandler* handler = static_cast<ConnectionHandler*>(context);

@@ -41,6 +41,8 @@ public:
 
     static void mexConnect(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs,ParameterWrapper &inputs);
     static void mexDisconnect(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs);
+    static void mexDisconnectAlldevices(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs);
+
 };
 
 #endif //MEX_METAWEAR_CONNECTIONHANDLER_H

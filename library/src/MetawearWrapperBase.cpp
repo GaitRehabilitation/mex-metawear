@@ -47,8 +47,12 @@ bool MetawearWrapperBase::hasHandler(const std::string& key){
 
 
 std::string MetawearWrapperBase::registerHandler(StreamHandler* handler){
-    if(hasHandler(handler->getKey()))
-        return "";
+    if(hasHandler(handler->getKey())) {
+        std::string key = handler->getKey();
+        free(handler);
+        return key;
+    }
+    handler->configure();
     m_handlers.emplace(handler->getKey(),handler);
     return handler->getKey();
 }
