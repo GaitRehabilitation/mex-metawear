@@ -52,7 +52,9 @@ ConfigurationHandler::ConfigurationHandler(ConnectionHandler* connectionHandler,
             {"configure_fusion_write", mexConfigureSensorFusionWrite},
 
             {"fusion_calibrate",mexFusionCalibrate},
-            {"set_connection_parameters",mexConfigureConnectionSettings}
+            {"set_connection_parameters",mexConfigureConnectionSettings},
+
+            {"teardown",mexTeardown}
     };
     wrapper->registerMethod(this, functions);
 }
@@ -494,6 +496,14 @@ void ConfigurationHandler::mexFusionCalibrate(std::shared_ptr<matlab::engine::MA
     delete(c);
 }
 
+void ConfigurationHandler::mexTeardown(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
 
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
 
-
+    wrapper->tearDown();
+}

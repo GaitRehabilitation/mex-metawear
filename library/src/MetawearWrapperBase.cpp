@@ -25,6 +25,9 @@
 #include <metawear/sensor/gyro_bmi160.h>
 #include <metawear/sensor/magnetometer_bmm150.h>
 #include <MetawearWrapperBase.h>
+#include <MexUtility.h>
+#include <metawear/core/anonymous_datasignal.h>
+#include <metawear/core/logging.h>
 
 
 #include "MetawearWrapperBase.h"
@@ -37,7 +40,13 @@ MetawearWrapperBase::MetawearWrapperBase(const std::string& mac, std::shared_ptr
 }
 
 MetawearWrapperBase::~MetawearWrapperBase() {
-
+    mbl_mw_metawearboard_free(this->getBoard());
+    for (std::map<std::string, StreamHandler*>::iterator it = m_handlers.begin(); it != m_handlers.end(); it++)
+    {
+        StreamHandler* handler =  it->second;
+        handler->clearSignals();
+        delete(handler);
+    }
 }
 
 
@@ -49,10 +58,14 @@ bool MetawearWrapperBase::hasHandler(const std::string& key){
 std::string MetawearWrapperBase::registerHandler(StreamHandler* handler){
     if(hasHandler(handler->getKey())) {
         std::string key = handler->getKey();
-        free(handler);
+        delete handler;
         return key;
     }
     handler->configure();
+    if(!handler->isValid()){
+        delete(handler);
+        return "";
+    }
     m_handlers.emplace(handler->getKey(),handler);
     return handler->getKey();
 }
@@ -65,12 +78,23 @@ bool MetawearWrapperBase::removeHandler(const std::string& key){
     return false;
 }
 
+
 StreamHandler* MetawearWrapperBase::getHandler(const std::string& key){
     auto  it = m_handlers.find(key);
     if (it != m_handlers.end())
         return it->second;
     return nullptr;
 }
+
+std::map<std::string, StreamHandler*>::iterator MetawearWrapperBase::begin(){
+    return m_handlers.begin();
+}
+
+
+std::map<std::string, StreamHandler*>::iterator MetawearWrapperBase::end(){
+    return m_handlers.end();
+}
+
 
 
 void MetawearWrapperBase::configureMetawear() {
@@ -130,7 +154,17 @@ void MetawearWrapperBase::configureMetawear() {
                                     });
 }
 
+void MetawearWrapperBase::tearDown(){
+    mbl_mw_metawearboard_tear_down(this->getBoard());
+    for (std::map<std::string, StreamHandler*>::iterator it = m_handlers.begin(); it != m_handlers.end(); it++)
+    {
+        StreamHandler* handler =  it->second;
+        handler->clearSignals();
+        delete(handler);
+    }
+    m_handlers.clear();
 
+}
 const std::string& MetawearWrapperBase::getMacAddress() const{
     return m_mac;
 }

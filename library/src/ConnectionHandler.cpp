@@ -20,6 +20,8 @@
 #include "FunctionWrapper.h"
 #include "MetawearWrapper.h"
 #include "MexPrintStream.h"
+#include "MetawearWrapper.h"
+#include "MetawearStateData.h"
 
 ConnectionHandler::ConnectionHandler(FunctionWrapper* wrapper): m_devices() {
     std::map<std::string, WrapperMethod *> functions = {
@@ -110,6 +112,12 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
          MexUtility::printf(engine,"Connection Established \n");
          matlab::data::ArrayFactory factory;
          matlab::data::CharArray addressCharArray = factory.createCharArray(wrapper->getMacAddress());
+         auto  it = handler->m_stateData.find(addressCharArray.toAscii());
+         if (it != handler->m_stateData.end()) {
+             MexUtility::printf(engine,"Recovered State Data");
+             MetawearStateData* stateData = it->second;
+             stateData->restore(wrapper);
+         }
          outputs[0] = addressCharArray;
      } else {
          free(wrapper);
@@ -122,7 +130,11 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
 void ConnectionHandler::mexDisconnectAlldevices(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs){
     auto *handler = static_cast<ConnectionHandler *>(context);
     for (auto it = handler->m_devices.begin(); it != handler->m_devices.end(); it++){
-        free(it->second);
+        MetawearWrapper* wrapper =  it->second;
+        std::string  address = it->first;
+        MetawearStateData* stateData = new MetawearStateData(wrapper);
+        handler->m_stateData.emplace(address,stateData);
+        delete wrapper;
     }
     handler->m_devices.clear();
 }
@@ -135,6 +147,9 @@ void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEng
     }
     matlab::data::CharArray address =  inputs[1];
     MetawearWrapper* wrapper =  handler->removeDevice(address.toAscii());
-    free(wrapper);
+    MetawearStateData* stateData = new MetawearStateData(wrapper);
+    handler->m_stateData.emplace(address.toAscii(),stateData);
+
+    delete wrapper;
     wrapper->mexStreamBlock();
 }

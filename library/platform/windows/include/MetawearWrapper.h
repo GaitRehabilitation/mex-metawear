@@ -76,7 +76,6 @@ public:
     ~MetawearWrapper();
 
     void connect() override;
-
 };
 
 #endif //MEX_METAWEAR_METAWEARWRAPPER_H

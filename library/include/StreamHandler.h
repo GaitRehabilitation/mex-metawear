@@ -22,12 +22,15 @@
 #include <metawear/core/datasignal.h>
 #include <metawear/core/types.h>
 #include <mutex>
+#include <metawear/core/cpp/anonymous_datasignal_private.h>
+#include <atomic>
 #include "MexPrintStream.h"
 
 struct MblMwDataSignal;
 enum StreamType{
     LOG,
-    STREAMING
+    STREAMING,
+    ANONYMOUS_DATASIGNAL
 };
 
 class StreamEntry{
@@ -50,14 +53,22 @@ typedef void (HandleData)(void* context,StreamEntry& entry);
 
 class StreamHandler{
 private:
+    std::atomic<bool> m_isConfiguring;
+    volatile bool m_isValid;
     std::mutex m_data_lock;
     std::queue<StreamEntry*>* m_data;
     MblMwDataSignal* m_signal;
     MblMwDataLogger* m_logger_signal;
+    MblMwAnonymousDataSignal* m_anonymous_signal;
     std::string m_root_handler;
     StreamType m_stream_type;
 public:
     StreamHandler(MblMwDataSignal* signal,StreamType type, const std::string& root_handler);
+    StreamHandler(MblMwAnonymousDataSignal* signal, const std::string& root_handler);
+    StreamHandler(MblMwDataLogger* signal, const std::string& root_handler);
+
+    void clearSignals();
+
     ~StreamHandler();
     void configure();
     void lockStream();
@@ -66,7 +77,10 @@ public:
     unsigned int size();
     void pop();
     bool isEmpty();
+    bool isValid();
     MblMwDataSignal* getSignal();
+    StreamType getStreamType();
+    MblMwDataLogger* getLogger();
     std::string getKey();
 };
 

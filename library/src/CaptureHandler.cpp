@@ -52,6 +52,7 @@ CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWra
             {"clear_logging", mexClearLogger},
             {"download_logging", mexDownloadLogger}
 
+
     };
     wrapper->registerMethod(this, functions);
 }
@@ -95,8 +96,6 @@ void CaptureHandler::mexClearLogger(std::shared_ptr<matlab::engine::MATLABEngine
 }
 
 void CaptureHandler::mexDownloadLogger(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
-    MexUtility::printf(engine,"Downloading Logging Data \n");
-
     CaptureHandler* handler = static_cast<CaptureHandler*>(context);
 
     MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
@@ -106,26 +105,28 @@ void CaptureHandler::mexDownloadLogger(std::shared_ptr<matlab::engine::MATLABEng
     MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
+    MexUtility::printf(engine,"Started Downloading logs for:" + address.toAscii());
+
     if(handler->m_printStream == nullptr)
         handler->m_printStream = new MexPrintStream(engine);
 
     handler->m_printStream->setBlock();
     static auto progress_update = [](void* context, uint32_t entries_left, uint32_t total_entries)-> void {
-        MexPrintStream* p = static_cast<MexPrintStream*>(context);
-        p->printf("download progress= " + std::to_string(entries_left) + "/" + std::to_string(total_entries));
+        MexPrintStream* stream = static_cast<MexPrintStream*>(context);
+        stream->printf("download progress= " + std::to_string(entries_left) + "/" + std::to_string(total_entries));
         if (!entries_left) {
-            p->printf("download complete");
-            p->release();
+            stream->printf("download complete");
+            stream->release();
         }
     };
     static auto unknown_entry = [](void* context, uint8_t id, int64_t epoch, const uint8_t* data, uint8_t length) -> void {
-        printf("received unknown log entry: id= %d\n", id);
+        MexPrintStream* stream = static_cast<MexPrintStream*>(context);
+//        stream->printf("received unknown log entry: id=" + std::to_string(id));
     };
 
-    static MblMwLogDownloadHandler download_handler = { handler->m_printStream , progress_update, unknown_entry };
+    static MblMwLogDownloadHandler download_handler = {  handler->m_printStream, progress_update, unknown_entry };
     mbl_mw_logging_download(board,100,&download_handler);
     handler->m_printStream->block();
-    MexUtility::printf(engine,"Finished Downloading Data \n");
 
 }
 

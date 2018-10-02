@@ -23,9 +23,11 @@
 
 class MetawearWrapper;
 class FunctionWrapper;
+class MetawearStateData;
 class ConnectionHandler {
 private:
     std::map<std::string, MetawearWrapper *> m_devices;
+    std::map<std::string,MetawearStateData*> m_stateData;
 public:
     ConnectionHandler(FunctionWrapper *wrapper);
 

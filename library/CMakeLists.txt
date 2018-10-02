@@ -8,7 +8,7 @@ SET(SOURCE
         src/QueryHandler.cpp
         src/CaptureHandler.cpp
         src/StreamHandler.cpp src/MexPrintStream.cpp
-        src/SubscriptionHandler.cpp)
+        src/SubscriptionHandler.cpp src/MetawearStateData.cpp)
 SET(INCLUDE
         include/FunctionWrapper.h
         include/MetawearConfig.h
@@ -22,7 +22,8 @@ SET(INCLUDE
         include/handlers/QueryHandler.h
         include/handlers/ConnectionHandler.h
         include/StreamHandler.h
-        include/MexPrintStream.h)
+        include/MexPrintStream.h
+        include/MetawearStateData.h)
 
 
 

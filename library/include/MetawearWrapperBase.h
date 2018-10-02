@@ -38,18 +38,22 @@ protected:
     MblMwMetaWearBoard *m_metaWearBoard;
     MexPrintStream m_mexPrintStream;
 
-    std::map<std::string, StreamHandler *> m_handlers;
+    std::map<std::string, StreamHandler*> m_handlers;
 protected:
     void configureMetawear();
 
 public:
     bool hasHandler(const std::string &);
 
-    std::string registerHandler( StreamHandler *);
+    std::string registerHandler(StreamHandler *);
 
     bool removeHandler(const std::string &);
 
     StreamHandler *getHandler(const std::string &);
+
+    std::map<std::string, StreamHandler*>::iterator begin();
+
+    std::map<std::string, StreamHandler*>::iterator end();
 
     MetawearWrapperBase(const std::string &mac, std::shared_ptr<matlab::engine::MATLABEngine> engine);
 
@@ -62,6 +66,8 @@ public:
     void mexStreamBlock();
 
     bool isConnected();
+
+    void tearDown();
 
     MblMwMetaWearBoard *getBoard();
 };

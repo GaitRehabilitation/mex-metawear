@@ -20,13 +20,16 @@
 #include <MetawearWrapper.h>
 #include <MexUtility.h>
 #include <metawear/platform/memory.h>
+#include <metawear/core/anonymous_datasignal.h>
 #include "StreamTypes.h"
 #include "MatlabDataArray.hpp"
 
 QueryHandler::QueryHandler(ConnectionHandler* connectionHandler,FunctionWrapper* wrapper):
         m_connectionHandler(connectionHandler) {
     std::map<std::string, WrapperMethod *> functions = {
-            {"query_meta",mexQueryBoardInfo}
+            {"query_meta",mexQueryBoardInfo},
+            {"query_handlers",mexListOfHandlers},
+            {"query_anonymous",mexQueryAnonymousSignals}
     };
     wrapper->registerMethod(this, functions);
 }
@@ -52,6 +55,39 @@ void QueryHandler::mexQueryBoardInfo(std::shared_ptr<matlab::engine::MATLABEngin
     for (auto it = board->module_config.begin(); it != board->module_config.end(); ++it) {
         MexUtility::printf(engine, "module configs:  " + std::to_string(it->first) + "\n");
     }
+}
+
+void QueryHandler::mexListOfHandlers(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    QueryHandler* handler = static_cast<QueryHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
+    for(std::map<std::string, StreamHandler*>::iterator it = wrapper->begin(); it != wrapper->end(); ++it){
+       MexUtility::printf(engine,it->first + "\n");
+    }
+}
+
+void QueryHandler::mexQueryAnonymousSignals(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    QueryHandler* handler = static_cast<QueryHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
+    MblMwMetaWearBoard *board = wrapper->getBoard();
+
+    mbl_mw_metawearboard_create_anonymous_datasignals(board,wrapper,[](void* context, MblMwMetaWearBoard* board, MblMwAnonymousDataSignal** anonymous_signals, uint32_t size) {
+        MetawearWrapper* wrap = static_cast<MetawearWrapper *>(context);
+        if(anonymous_signals == nullptr){
+            return;
+        }
+        for(uint32_t i= 0; i < size; i++){
+            auto identifier = mbl_mw_anonymous_datasignal_get_identifier(anonymous_signals[i]);
+            wrap->registerHandler(new StreamHandler(anonymous_signals[i],std::string(identifier)));
+        }
+    });
 }
 
 QueryHandler::~QueryHandler() {

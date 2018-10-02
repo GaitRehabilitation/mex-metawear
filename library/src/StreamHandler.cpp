@@ -16,29 +16,42 @@
 
 #include <StreamHandler.h>
 #include <metawear/core/logging.h>
+#include <metawear/core/anonymous_datasignal.h>
 
 #include "StreamHandler.h"
 
+
 void StreamHandler::configure() {
+    m_isConfiguring = true;
     switch (m_stream_type){
         case StreamType::LOG:
-            mbl_mw_datasignal_log(m_signal, this, [](void* context, MblMwDataLogger* logger) -> void {
-                auto h = static_cast<StreamHandler *>(context);
-                if (logger != nullptr) {
-                    h->m_logger_signal = logger;
-                    mbl_mw_logger_subscribe(logger, context, [](void *context, const MblMwData *data) -> void {
-                        auto*  handler = static_cast<StreamHandler *>(context);
-                        handler->m_data_lock.lock();
-                        handler->m_data->push(new StreamEntry(data));
-                        handler->m_data_lock.unlock();
-                    });
-
-                    printf("logger ready\n");
-                } else {
-                    printf("Failed to create the logger\n");
-                }
-            });
-
+            if(m_logger_signal)
+            {
+                mbl_mw_logger_subscribe(m_logger_signal, this, [](void *context, const MblMwData *data) -> void {
+                    auto *handler = static_cast<StreamHandler *>(context);
+                    handler->m_data_lock.lock();
+                    handler->m_data->push(new StreamEntry(data));
+                    handler->m_data_lock.unlock();
+                });
+                this->m_isValid = true;
+                this->m_isConfiguring = false;
+            } else {
+                mbl_mw_datasignal_log(m_signal, this, [](void *context, MblMwDataLogger *logger) -> void {
+                    auto h = static_cast<StreamHandler *>(context);
+                    if (logger != nullptr) {
+                        h->m_logger_signal = logger;
+                        mbl_mw_logger_subscribe(logger, context, [](void *context, const MblMwData *data) -> void {
+                            auto *handler = static_cast<StreamHandler *>(context);
+                            handler->m_data_lock.lock();
+                            handler->m_data->push(new StreamEntry(data));
+                            handler->m_data_lock.unlock();
+                        });
+                        h->m_root_handler = mbl_mw_logger_generate_identifier(logger);
+                        h->m_isValid = true;
+                    }
+                    h->m_isConfiguring = false;
+                });
+            }
             break;
         case StreamType::STREAMING:
             mbl_mw_datasignal_subscribe(m_signal, this, [](void *context, const MblMwData *data) -> void {
@@ -47,8 +60,25 @@ void StreamHandler::configure() {
                 handler->m_data->push(new StreamEntry(data));
                 handler->m_data_lock.unlock();
             });
+            this->m_isConfiguring = false;
+            break;
+        case StreamType::ANONYMOUS_DATASIGNAL:
+            mbl_mw_anonymous_datasignal_subscribe(m_anonymous_signal,this,[](void* context, const MblMwData* data) {
+                auto handler = static_cast<StreamHandler *>(context);
+                handler->m_data_lock.lock();
+                handler->m_data->push(new StreamEntry(data));
+                handler->m_data_lock.unlock();
+            });
+            this->m_isConfiguring = false;
             break;
     }
+    while(m_isConfiguring){
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+}
+
+bool StreamHandler::isValid(){
+    return m_isValid;
 }
 
 StreamHandler::StreamHandler(MblMwDataSignal* signal, StreamType type, const std::string& root_handler):
@@ -56,24 +86,50 @@ StreamHandler::StreamHandler(MblMwDataSignal* signal, StreamType type, const std
     m_stream_type(type),
     m_data(new std::queue<StreamEntry*>()),
     m_logger_signal(nullptr),
-    m_signal(signal) {
+    m_signal(signal),
+    m_isValid(false) {
+}
+
+StreamHandler::StreamHandler(MblMwAnonymousDataSignal* signal, const std::string& root_handler):
+    m_root_handler(root_handler),
+    m_stream_type(StreamType::ANONYMOUS_DATASIGNAL),
+    m_data(new std::queue<StreamEntry*>()),
+    m_logger_signal(nullptr),
+    m_signal(nullptr),
+    m_anonymous_signal(signal),
+    m_isValid(false){
+}
+
+StreamHandler::StreamHandler(MblMwDataLogger *signal, const std::string &root_handler) :
+        m_root_handler(root_handler),
+        m_stream_type(StreamType::LOG),
+        m_data(new std::queue<StreamEntry*>()),
+        m_logger_signal(signal),
+        m_signal(nullptr),
+        m_anonymous_signal(nullptr),
+        m_isValid(false){
 
 }
 
+void StreamHandler::clearSignals(){
+    m_signal = nullptr;
+    m_logger_signal = nullptr;
 
+}
 
 StreamHandler::~StreamHandler() {
-    mbl_mw_datasignal_unsubscribe(m_signal);
+    if(m_signal)
+        mbl_mw_datasignal_unsubscribe(m_signal);
     if(m_logger_signal)
         mbl_mw_logger_remove(m_logger_signal);
     m_data_lock.lock();
     while(!m_data->empty()){
         StreamEntry* entry = m_data->front();
-        free(entry);
+        delete(entry);
         m_data->pop();
     }
     m_data_lock.unlock();
-    free(m_data);
+    delete(m_data);
 }
 
 StreamEntry::StreamEntry(const MblMwData *data) :
@@ -197,7 +253,10 @@ void StreamHandler::pop() {
 std::string StreamHandler::getKey(){
     switch (m_stream_type){
         case StreamType::LOG:
-            return m_root_handler + "_logging";
+            //using the generated identifier
+            return m_root_handler;
+        case StreamType::ANONYMOUS_DATASIGNAL:
+            return m_root_handler;
         case StreamType::STREAMING:
             return m_root_handler + "_streaming";
     }
@@ -211,6 +270,15 @@ unsigned int StreamHandler::size(){
 MblMwDataSignal* StreamHandler::getSignal(){
     return m_signal;
 }
+
+StreamType StreamHandler::getStreamType(){
+    return m_stream_type;
+
+}
+MblMwDataLogger* StreamHandler::getLogger(){
+    return m_logger_signal;
+}
+
 
 StreamEntry::~StreamEntry() {
     free(m_data);

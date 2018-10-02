@@ -32,7 +32,8 @@ public:
     ~QueryHandler();
 
     static void mexQueryBoardInfo(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
-
+    static void mexListOfHandlers(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
+    static void mexQueryAnonymousSignals(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs);
 };
 
 #endif //MEX_METAWEAR_QUERYHANDLER_H

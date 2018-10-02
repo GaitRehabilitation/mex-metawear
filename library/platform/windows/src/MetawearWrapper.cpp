@@ -120,7 +120,7 @@ MetawearWrapper::MetawearWrapper(const std::string& mac,std::shared_ptr<matlab::
 
 }
 
-MetawearWrapper::~MetawearWrapper(){
+MetawearWrapper::~MetawearWrapper() {
     for (auto it : m_characterstics)
         delete it.second;
     for (auto it : m_services)
@@ -160,6 +160,7 @@ void MetawearWrapper::connect() {
                     case BluetoothConnectionStatus::Disconnected:
                         m_mexPrintStream.printf("Failed to connect to device");
                         m_mexPrintStream.release();
+
                         break;
                 }
             });
@@ -196,6 +197,7 @@ GattCharacteristic^  MetawearWrapper::findCharacterstic(uint64_t low, uint64_t h
 	m_mexPrintStream.printf("Failed to find characteric");
 	return nullptr;
 }
+
 
 void MetawearWrapper::startDiscovery(){
     try {
