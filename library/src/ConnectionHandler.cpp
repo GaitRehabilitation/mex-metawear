@@ -114,7 +114,7 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
          matlab::data::CharArray addressCharArray = factory.createCharArray(wrapper->getMacAddress());
          auto  it = handler->m_stateData.find(addressCharArray.toAscii());
          if (it != handler->m_stateData.end()) {
-             MexUtility::printf(engine,"Recovered State Data");
+             MexUtility::printf(engine,"Discovered State Data \n");
              MetawearStateData* stateData = it->second;
              stateData->restore(wrapper);
          }
