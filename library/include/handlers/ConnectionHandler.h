@@ -37,13 +37,12 @@ public:
     MetawearWrapper *mexGetDeviceAndVerify(std::shared_ptr<matlab::engine::MATLABEngine> engine,const std::string &mac);
 
     void addDevice(MetawearWrapper* wrapper);
-
-
     MetawearWrapper *removeDevice(const std::string &mac);
 
     static void mexConnect(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs,ParameterWrapper &inputs);
     static void mexDisconnect(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs);
     static void mexDisconnectAlldevices(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs);
+    static void mexCleareStateData(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs);
 
 };
 

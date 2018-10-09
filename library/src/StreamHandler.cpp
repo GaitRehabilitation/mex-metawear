@@ -22,7 +22,6 @@
 
 
 void StreamHandler::configure() {
-    m_isConfiguring = true;
     switch (m_stream_type){
         case StreamType::LOG:
             if(m_logger_signal)
@@ -34,8 +33,8 @@ void StreamHandler::configure() {
                     handler->m_data_lock.unlock();
                 });
                 this->m_isValid = true;
-                this->m_isConfiguring = false;
             } else {
+                m_configuring = true;
                 mbl_mw_datasignal_log(m_signal, this, [](void *context, MblMwDataLogger *logger) -> void {
                     auto h = static_cast<StreamHandler *>(context);
                     if (logger != nullptr) {
@@ -49,8 +48,12 @@ void StreamHandler::configure() {
                         h->m_root_handler = mbl_mw_logger_generate_identifier(logger);
                         h->m_isValid = true;
                     }
-                    h->m_isConfiguring = false;
+                    h->m_configuring = false;
                 });
+                while (m_configuring)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                }
             }
             break;
         case StreamType::STREAMING:
@@ -60,7 +63,7 @@ void StreamHandler::configure() {
                 handler->m_data->push(new StreamEntry(data));
                 handler->m_data_lock.unlock();
             });
-            this->m_isConfiguring = false;
+            m_isValid = true;
             break;
         case StreamType::ANONYMOUS_DATASIGNAL:
             mbl_mw_anonymous_datasignal_subscribe(m_anonymous_signal,this,[](void* context, const MblMwData* data) {
@@ -69,11 +72,9 @@ void StreamHandler::configure() {
                 handler->m_data->push(new StreamEntry(data));
                 handler->m_data_lock.unlock();
             });
-            this->m_isConfiguring = false;
+
+            m_isValid = true;
             break;
-    }
-    while(m_isConfiguring){
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 }
 

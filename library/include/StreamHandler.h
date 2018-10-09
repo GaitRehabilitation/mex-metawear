@@ -53,8 +53,8 @@ typedef void (HandleData)(void* context,StreamEntry& entry);
 
 class StreamHandler{
 private:
-    std::atomic<bool> m_isConfiguring;
-    volatile bool m_isValid;
+    std::atomic<bool> m_isValid;
+    std::atomic<bool> m_configuring;
     std::mutex m_data_lock;
     std::queue<StreamEntry*>* m_data;
     MblMwDataSignal* m_signal;

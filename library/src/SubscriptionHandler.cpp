@@ -115,11 +115,11 @@ void SubscriptionHandler::mexSubscribeAcc(std::shared_ptr<matlab::engine::MATLAB
 void SubscriptionHandler::mexSubscribeFusion(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs) {
     SubscriptionHandler *handler = static_cast<SubscriptionHandler *>(context);
 
-    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::INPUT, inputs.size(), 3);
+    MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::INPUT, inputs.size(), 4);
     MexUtility::checkNumberOfParameters(engine, MexUtility::ParameterType::OUTPUT, outputs.size(), 1);
     MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 1, inputs[1].getType(), matlab::data::ArrayType::CHAR);
     MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 2, inputs[2].getType(), matlab::data::ArrayType::CHAR);
-    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 3, inputs[2].getType(), matlab::data::ArrayType::CHAR);
+    MexUtility::checkType(engine, MexUtility::ParameterType::INPUT, 3, inputs[3].getType(), matlab::data::ArrayType::CHAR);
 
     matlab::data::CharArray address = inputs[1];
     matlab::data::CharArray mode = inputs[2];

@@ -144,6 +144,8 @@ void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engi
     MetawearWrapper *wrapper = handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
 
     StreamHandler* streamHandler = wrapper->getHandler(key.toAscii());
+    if(streamHandler == nullptr)
+        MexUtility::error(engine,"Unknown handler");
     //lock stream so data can retrieved without being modified
     if(streamHandler->isEmpty()){
         matlab::data::ArrayFactory factory;

@@ -27,7 +27,8 @@ ConnectionHandler::ConnectionHandler(FunctionWrapper* wrapper): m_devices() {
     std::map<std::string, WrapperMethod *> functions = {
             {"connect",    mexConnect},
             {"disconnect", mexDisconnect},
-            {"disconnect_all",mexDisconnectAlldevices}
+            {"disconnect_all",mexDisconnectAlldevices},
+            {"clear_state_data",mexCleareStateData}
     };
     wrapper->registerMethod(this, functions);
 }
@@ -139,6 +140,16 @@ void ConnectionHandler::mexDisconnectAlldevices(std::shared_ptr<matlab::engine::
     handler->m_devices.clear();
 }
 
+void ConnectionHandler::mexCleareStateData(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs){
+    auto *handler = static_cast<ConnectionHandler *>(context);
+    for (auto it = handler->m_stateData.begin(); it != handler->m_stateData.end(); it++){
+        MetawearStateData* stateData =  it->second;
+        delete(stateData);
+    }
+    handler->m_stateData.clear();
+}
+
+
 void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
     ConnectionHandler* handler = static_cast<ConnectionHandler*>(context);
     if (inputs.size() != 2) {
@@ -149,7 +160,5 @@ void ConnectionHandler::mexDisconnect( std::shared_ptr<matlab::engine::MATLABEng
     MetawearWrapper* wrapper =  handler->removeDevice(address.toAscii());
     MetawearStateData* stateData = new MetawearStateData(wrapper);
     handler->m_stateData.emplace(address.toAscii(),stateData);
-
     delete wrapper;
-    wrapper->mexStreamBlock();
 }

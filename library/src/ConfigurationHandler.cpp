@@ -27,6 +27,7 @@
 #include <metawear/sensor/magnetometer_bmm150.h>
 #include <metawear/sensor/barometer_bosch.h>
 #include <metawear/sensor/sensor_fusion.h>
+#include <metawear/core/debug.h>
 
 
 ConfigurationHandler::ConfigurationHandler(ConnectionHandler* connectionHandler,FunctionWrapper* wrapper) :
@@ -54,7 +55,8 @@ ConfigurationHandler::ConfigurationHandler(ConnectionHandler* connectionHandler,
             {"fusion_calibrate",mexFusionCalibrate},
             {"set_connection_parameters",mexConfigureConnectionSettings},
 
-            {"teardown",mexTeardown}
+            {"teardown",mexTeardown},
+            {"reset",mexReset}
     };
     wrapper->registerMethod(this, functions);
 }
@@ -506,4 +508,15 @@ void ConfigurationHandler::mexTeardown(std::shared_ptr<matlab::engine::MATLABEng
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
     wrapper->tearDown();
+}
+
+void ConfigurationHandler::mexReset(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    ConfigurationHandler* handler = static_cast<ConfigurationHandler*>(context);
+    MexUtility::checkNumberOfParameters(engine,MexUtility::ParameterType::INPUT,inputs.size(),2);
+    MexUtility::checkType(engine,MexUtility::ParameterType::INPUT,1,inputs[1].getType(),matlab::data::ArrayType::CHAR);
+
+    matlab::data::CharArray address =  inputs[1];
+    MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
+    MblMwMetaWearBoard*  board = wrapper->getBoard();
+    mbl_mw_debug_reset(board);
 }
