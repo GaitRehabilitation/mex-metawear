@@ -34,6 +34,7 @@ public:
     ~ConnectionHandler();
 
     MetawearWrapper *getDevice(const std::string &mac);
+    std::map<std::string ,MetawearWrapper*> getDevices();
     MetawearWrapper *mexGetDeviceAndVerify(std::shared_ptr<matlab::engine::MATLABEngine> engine,const std::string &mac);
 
     void addDevice(MetawearWrapper* wrapper);

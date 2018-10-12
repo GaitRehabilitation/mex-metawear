@@ -31,28 +31,27 @@
 CaptureHandler::CaptureHandler(ConnectionHandler *connectionHandler, FunctionWrapper *wrapper):
     m_connectionHandler(connectionHandler),m_printStream(nullptr){
 
-    std::map<std::string, WrapperMethod *> functions =  {
+    std::map<std::string, WrapperMethod *> functions = {
             //enable
-            {"enable_gyro", mexEnableGyro},
-            {"enable_accelerometer", mexEnableAccelerometer},
-            {"enable_magnetometer", mexEnableMagnetometer},
-            {"set_sensor_fusion_flag",mexSetSensorFusionFlag},
-            {"enable_sensorfusion", mexEnableSensorFusion},
+            {"enable_gyro",            mexEnableGyro},
+            {"enable_accelerometer",   mexEnableAccelerometer},
+            {"enable_magnetometer",    mexEnableMagnetometer},
+            {"set_sensor_fusion_flag", mexSetSensorFusionFlag},
+            {"enable_sensorfusion",    mexEnableSensorFusion},
 
             //disable
-            {"disable_gyro",mexDisableGyro},
-            {"disable_accelerometer",mexDisableAccelerometer},
-            {"disable_magnetometer", mexDisableMagnetometer},
-            {"disable_sensorfusion",mexDisableSensorFusion},
+            {"disable_gyro",           mexDisableGyro},
+            {"disable_accelerometer",  mexDisableAccelerometer},
+            {"disable_magnetometer",   mexDisableMagnetometer},
+            {"disable_sensorfusion",   mexDisableSensorFusion},
 
-            {"query", mexQuery},
+            {"query",                  mexQuery},
 
-            {"start_logging", mexStartLogger},
-            {"stop_logging", mexStopLogger},
-            {"clear_logging", mexClearLogger},
-            {"download_logging", mexDownloadLogger}
-
-
+            {"start_logging",          mexStartLogger},
+            {"stop_logging",           mexStopLogger},
+            {"clear_logging",          mexClearLogger},
+            {"download_logging",       mexDownloadLogger},
+            {"download_logging_all",   mexDownloadLoggerAll}
     };
     wrapper->registerMethod(this, functions);
 }
@@ -105,7 +104,7 @@ void CaptureHandler::mexDownloadLogger(std::shared_ptr<matlab::engine::MATLABEng
     MetawearWrapper* wrapper =  handler->m_connectionHandler->mexGetDeviceAndVerify(engine,address.toAscii());
     MblMwMetaWearBoard*  board = wrapper->getBoard();
 
-    MexUtility::printf(engine,"Started Downloading logs for:" + address.toAscii());
+    MexUtility::printf(engine,"Started Downloading logs for:" + address.toAscii() + "\n");
 
     if(handler->m_printStream == nullptr)
         handler->m_printStream = new MexPrintStream(engine);
@@ -128,6 +127,52 @@ void CaptureHandler::mexDownloadLogger(std::shared_ptr<matlab::engine::MATLABEng
     mbl_mw_logging_download(board,100,&download_handler);
     handler->m_printStream->block();
 
+}
+void CaptureHandler::mexDownloadLoggerAll(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){
+    CaptureHandler* handler = static_cast<CaptureHandler*>(context);
+    std::map<std::string ,MetawearWrapper*> sensors = handler->m_connectionHandler->getDevices();
+
+    if(handler->m_printStream == nullptr)
+        handler->m_printStream = new MexPrintStream(engine);
+
+    struct SenCount{
+        MexPrintStream* stream;
+        std::atomic<size_t > count;
+    };
+    static SenCount c = {handler->m_printStream};
+    c.count = sensors.size();
+    c.stream = handler->m_printStream;
+
+    int index = 0;
+    for (auto it = sensors.begin(); it != sensors.end(); it++) {
+        MetawearWrapper *wrapper = it->second;
+        std::string address = it->first;
+
+        handler->m_printStream->setBlock();
+        static auto progress_update = [](void *context, uint32_t entries_left, uint32_t total_entries) -> void {
+            SenCount *s = static_cast<SenCount *>(context);
+            s->stream->printf(
+                    "download progress= " + std::to_string(entries_left) + "/" + std::to_string(total_entries));
+            if (!entries_left) {
+                s->stream->printf("download complete");
+                s->count--;
+                if (s->count <= 0) {
+                    s->stream->release();
+                }
+            }
+        };
+        static auto unknown_entry = [](void *context, uint8_t id, int64_t epoch, const uint8_t *data,
+                                       uint8_t length) -> void {
+            MexPrintStream *stream = static_cast<MexPrintStream *>(context);
+//        stream->printf("received unknown log entry: id=" + std::to_string(id));
+        };
+        MblMwMetaWearBoard *board = wrapper->getBoard();
+        MexUtility::printf(engine, "Started Downloading logs for:" + address + "\n");
+
+        static MblMwLogDownloadHandler download_handler = {&c, progress_update, unknown_entry};
+        mbl_mw_logging_download(board, 100, &download_handler);
+    }
+    handler->m_printStream->block();
 }
 
 void CaptureHandler::mexQuery(std::shared_ptr<matlab::engine::MATLABEngine> engine,void *context,  ParameterWrapper& outputs, ParameterWrapper& inputs){

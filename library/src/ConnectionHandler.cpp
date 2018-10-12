@@ -83,7 +83,7 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
      // standard IEEE 802 format for MAC-48 address. verify if the format is correct.
      std::regex addressMatch("^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$");
      if (!std::regex_match(address.toAscii(), addressMatch)) {
-         MexUtility::error(engine, "Invalid bluetooth address for second parameter");
+         MexUtility::error(engine, "Invalid bluetooth address for second parameter \n");
          return;
      }
 
@@ -127,6 +127,10 @@ MetawearWrapper* ConnectionHandler::removeDevice(const std::string& mac) {
          outputs[0] = addressCharArray;
      }
  }
+
+std::map<std::string ,MetawearWrapper*> ConnectionHandler::getDevices() {
+    return m_devices;
+}
 
 void ConnectionHandler::mexDisconnectAlldevices(std::shared_ptr<matlab::engine::MATLABEngine> engine, void *context, ParameterWrapper &outputs, ParameterWrapper &inputs){
     auto *handler = static_cast<ConnectionHandler *>(context);
