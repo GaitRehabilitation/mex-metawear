@@ -4,3 +4,6 @@
 [submodule "3rdparty/libblepp"]
 	path = 3rdparty/libblepp
 	url = https://github.com/edrosten/libblepp.git
+[submodule "3rdparty/Warble"]
+	path = 3rdparty/Warble
+	url = git@github.com:mbientlab/Warble.git

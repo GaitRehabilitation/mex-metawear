@@ -3,6 +3,7 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/3rdparty/MetaWear-SDK-Cpp" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/3rdparty/Warble" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/3rdparty/libblepp" vcs="Git" />
   </component>
 </project>
